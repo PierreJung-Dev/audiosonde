@@ -1,0 +1,23 @@
+{
+  "name": "audiosonde",
+  "version": "0.0.0",
+  "description": "Self-hostable, storage-agnostic audio analysis engine — metadata, LUFS, transcodes, waveform peaks, BPM/key behind one signed HTTP contract.",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.1",
+  "scripts": {
+    "dev": "echo 'TODO(M0): implement (see docs/implementation-plan.md)' && exit 1",
+    "build": "echo 'TODO(M0): implement (see docs/implementation-plan.md)' && exit 1",
+    "test": "echo 'TODO(M0): implement (see docs/implementation-plan.md)' && exit 1",
+    "lint": "echo 'TODO(M0): implement (see docs/implementation-plan.md)' && exit 1",
+    "typecheck": "echo 'TODO(M0): implement (see docs/implementation-plan.md)' && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PierreJung-Dev/audiosonde.git"
+  }
+}
