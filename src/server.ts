@@ -5,6 +5,8 @@ import { resolveBinaries } from './binaries.js';
 import { registerHealthz } from './routes/healthz.js';
 import { registerReadyz } from './routes/readyz.js';
 import { registerJobs } from './routes/jobs.js';
+import { JobRunner } from './pipeline/runner.js';
+import type { AddressPolicy } from './net/ssrf.js';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -18,6 +20,16 @@ export interface ServerDeps {
   loggerEnabled?: boolean;
   /** Override binary resolution (tests inject a fake report). */
   resolveBinaries?: () => Promise<BinaryReport>;
+  /**
+   * Override the SSRF address policy (tests allow loopback so a local mock
+   * caller can serve sources and receive callbacks). NEVER overridden in
+   * production wiring — src/index.ts does not pass it.
+   */
+  addressPolicy?: AddressPolicy;
+  /** Override the root for per-job tmp dirs (tests use a scratch dir). */
+  tmpRoot?: string;
+  /** Shrink the callback retry backoff base (tests). */
+  callbackBaseDelayMs?: number;
 }
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
@@ -55,9 +67,24 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   let cached: Promise<BinaryReport> | undefined;
   const getBinaries = (): Promise<BinaryReport> => (cached ??= resolve());
 
+  const runner = new JobRunner({
+    config,
+    log: app.log,
+    ...(deps.addressPolicy !== undefined ? { policy: deps.addressPolicy } : {}),
+    ...(deps.tmpRoot !== undefined ? { tmpRoot: deps.tmpRoot } : {}),
+    ...(deps.callbackBaseDelayMs !== undefined
+      ? { callbackBaseDelayMs: deps.callbackBaseDelayMs }
+      : {}),
+  });
+
+  // Graceful shutdown: let in-flight jobs finish their callback + cleanup.
+  app.addHook('onClose', async () => {
+    await runner.drain();
+  });
+
   registerHealthz(app, { getBinaries });
   registerReadyz(app, { getBinaries });
-  registerJobs(app, { config });
+  registerJobs(app, { config, runner });
 
   return app;
 }

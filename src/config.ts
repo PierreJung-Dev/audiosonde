@@ -18,6 +18,7 @@ export interface Config {
   readonly maxSourceBytes: number;
   readonly maxDurationMs: number;
   readonly jobTimeoutMs: number;
+  readonly analyzerTimeoutMs: number;
   readonly signatureToleranceSeconds: number;
   readonly binaries: {
     readonly ffmpeg: string;
@@ -37,6 +38,7 @@ const envSchema = z.object({
   MAX_SOURCE_BYTES: z.coerce.number().int().positive().default(500 * 1024 * 1024),
   MAX_DURATION_MS: z.coerce.number().int().positive().default(4 * 60 * 60 * 1000),
   JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
+  ANALYZER_TIMEOUT_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
   SIGNATURE_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
@@ -71,6 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     maxSourceBytes: e.MAX_SOURCE_BYTES,
     maxDurationMs: e.MAX_DURATION_MS,
     jobTimeoutMs: e.JOB_TIMEOUT_MS,
+    analyzerTimeoutMs: e.ANALYZER_TIMEOUT_MS,
     signatureToleranceSeconds: e.SIGNATURE_TOLERANCE_SECONDS,
     binaries: {
       ffmpeg: e.FFMPEG_PATH,

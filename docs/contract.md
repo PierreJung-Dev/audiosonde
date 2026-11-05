@@ -44,7 +44,7 @@ X-Audiosonde-Signature: t=<unix-seconds>,v1=<hex(hmac_sha256(secret, `${t}.${raw
   "jobId": "b3e0…-uuid",                    // caller-generated; echoed in the callback
   "source": {
     "url": "https://…signed-get…",           // http(s) only; fetched once, streamed to disk
-    "contentHash": "sha1:9f3a…",             // optional, verified after download if present
+    "contentHash": "sha1:9f3a…",             // optional; "sha1:<hex>" or "sha256:<hex>", verified after download
     "filenameHint": "mix-v12.wav",           // optional, helps format detection
     "maxBytes": 524288000                    // optional caller-side cap (engine also has one)
   },
@@ -70,8 +70,19 @@ X-Audiosonde-Signature: t=<unix-seconds>,v1=<hex(hmac_sha256(secret, `${t}.${raw
 ```
 
 Responses: `202 {"accepted": true, "jobId": …}` · `400` (schema) · `401` (signature) ·
-`422` (unsupported analysis / missing output slot). Accepting a job does not guarantee
-success — failures are reported through the callback.
+`422` (unsupported analysis / missing output slot) · `429` (over capacity, see below).
+Accepting a job does not guarantee success — failures are reported through the callback.
+
+- **Analysis availability**: an analysis name the contract defines but this build does not
+  yet implement is rejected with `422` (`analysis not available in this build: …`) — the
+  engine never accepts work it cannot perform. The available set grows release by release.
+- **`noop` analysis**: a diagnostic analyzer that fetches the source and returns
+  `{ "ok": true }` without analyzing anything. Use it to smoke-test a deployment
+  (signatures, fetch, callback) end to end. Its result lands at `result.noop`.
+- **Backpressure (`429`)**: the engine runs a bounded number of concurrent jobs and does
+  not queue (it is stateless; a queued job would be silently lost on restart). When all
+  slots are busy, `POST /v1/jobs` answers `429 {"error": "over_capacity", …}` with a
+  `Retry-After` header — resubmission is the caller's queue's job.
 
 ## Callback payload
 

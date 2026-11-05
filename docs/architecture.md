@@ -38,7 +38,10 @@
   verification accepts a current + optional previous secret (zero-downtime rotation); the
   `±300s` window is the only replay protection (no nonce store — stateless by design).
 - **SSRF guards**: http(s) only; resolve DNS and reject private/link-local/loopback ranges
-  (including on redirects, max 3); apply to source fetch AND callback POST.
+  (including on redirects, max 3); apply to source fetch AND callback POST. The check runs
+  inside the DNS lookup used to open the socket, so the vetted address is the dialed
+  address (no rebinding window). Callback POSTs follow only 307/308 redirects (method- and
+  body-preserving); a 301/302/303 answer is treated as a delivery failure.
 - **Zero storage credentials**: only caller-signed URLs. The engine can be pointed at any
   storage (B2, S3, GCS, MinIO) without configuration.
 - **Untrusted input discipline**: magic-bytes detection (never trust extension or

@@ -18,6 +18,7 @@ export const KNOWN_ANALYSES = [
   'peaks',
   'bpm',
   'key',
+  'noop', // diagnostic: runs the full pipeline without analyzing anything
 ] as const;
 
 const knownAnalysisSet = new Set<string>(KNOWN_ANALYSES);
@@ -52,7 +53,10 @@ export const jobRequestSchema = z.object({
   jobId: z.string().min(1),
   source: z.object({
     url: httpUrl,
-    contentHash: z.string().min(1).optional(),
+    contentHash: z
+      .string()
+      .regex(/^(sha1|sha256):[0-9a-f]+$/i, 'must be "sha1:<hex>" or "sha256:<hex>"')
+      .optional(),
     filenameHint: z.string().min(1).optional(),
     maxBytes: z.number().int().positive().optional(),
   }),
@@ -78,13 +82,23 @@ const OUTPUT_REQUIRED = ['transcode', 'peaks'] as const;
 
 /**
  * Semantic validation beyond the structural schema. Failures map to 422.
+ *
+ * `available` is the set of analyses this build actually implements (the
+ * analyzer registry). A contract-known but not-yet-implemented analysis is
+ * rejected too — the engine never accepts work it cannot perform — with a
+ * message that distinguishes the two cases.
  */
-export function validateSemantics(job: JobRequest): SemanticResult {
+export function validateSemantics(
+  job: JobRequest,
+  available: ReadonlySet<string>,
+): SemanticResult {
   const issues: string[] = [];
 
   for (const analysis of job.analyses) {
     if (!knownAnalysisSet.has(analysis)) {
       issues.push(`unsupported analysis: ${analysis}`);
+    } else if (!available.has(analysis)) {
+      issues.push(`analysis not available in this build: ${analysis}`);
     }
   }
 
