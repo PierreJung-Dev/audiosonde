@@ -10,7 +10,7 @@ export interface ReadyzDeps {
  * Grows as analyzers land: ffprobe since M2 (metadata), ffmpeg from M3
  * (loudness/transcode), audiowaveform from M4 (peaks).
  */
-const REQUIRED_BINARIES: readonly (keyof BinaryReport)[] = ['ffprobe'];
+const REQUIRED_BINARIES: readonly (keyof BinaryReport)[] = ['ffprobe', 'ffmpeg'];
 
 export function registerReadyz(app: FastifyInstance, deps: ReadyzDeps): void {
   // Readiness: 503 when a required binary is missing, so an orchestrator can

@@ -8,6 +8,7 @@ import { ALGO_VERSIONS, analyzersFor } from '../analyzers/registry.js';
 import type { Analyzer, AnalyzerContext } from '../analyzers/types.js';
 import { publicAddressPolicy, type AddressPolicy } from '../net/ssrf.js';
 import { probeFile, type ProbeData } from '../media/probe.js';
+import { measureLoudness, type LoudnessMeasurement } from '../media/loudness.js';
 import { ENGINE_VERSION } from '../version.js';
 import { dispatchCallback } from './callback.js';
 import { fetchSource } from './fetch.js';
@@ -126,6 +127,7 @@ export class JobRunner {
       downloadMs = fetched.downloadMs;
 
       let probePromise: Promise<ProbeData> | undefined;
+      let loudnessPromise: Promise<LoudnessMeasurement> | undefined;
       const ctx: AnalyzerContext = {
         job,
         sourcePath,
@@ -133,13 +135,22 @@ export class JobRunner {
         container: fetched.container,
         config: this.config,
         signal,
+        policy: this.policy,
         probe: () =>
           (probePromise ??= probeFile(sourcePath, {
             ffprobePath: this.config.binaries.ffprobe,
             timeoutMs: this.config.analyzerTimeoutMs,
             signal,
           })),
+        measureLoudness: () =>
+          (loudnessPromise ??= measureLoudness(sourcePath, {
+            ffmpegPath: this.config.binaries.ffmpeg,
+            timeoutMs: this.config.analyzerTimeoutMs,
+            signal,
+          })),
       };
+
+      await this.enforceDurationCap(job, ctx);
 
       for (const analyzer of analyzersFor(job.analyses)) {
         const t0 = Date.now();
@@ -188,6 +199,27 @@ export class JobRunner {
           ...(outcome.lastError !== undefined ? { lastError: outcome.lastError } : {}),
         },
         'callback delivery failed; job result dropped',
+      );
+    }
+  }
+
+  /** Analyses that decode the whole source (expensive stages). */
+  private static readonly DECODING_ANALYSES = new Set(['loudness', 'transcode', 'peaks', 'bpm', 'key']);
+
+  /**
+   * Enforce the advertised max-duration limit before any expensive stage.
+   * Cheap analyses (metadata, noop) skip the gate — and the probe cost.
+   */
+  private async enforceDurationCap(job: JobRequest, ctx: AnalyzerContext): Promise<void> {
+    if (!job.analyses.some((a) => JobRunner.DECODING_ANALYSES.has(a))) return;
+    const probe = await ctx.probe();
+    const raw = probe.format.duration ?? probe.audioStream.duration;
+    const durationMs = raw === undefined ? null : Number(raw) * 1000;
+    if (durationMs !== null && Number.isFinite(durationMs) && durationMs > this.config.maxDurationMs) {
+      throw new JobFailure(
+        'UNSUPPORTED_FORMAT',
+        `source duration ${Math.round(durationMs)}ms exceeds the ${this.config.maxDurationMs}ms limit`,
+        { retryable: false },
       );
     }
   }

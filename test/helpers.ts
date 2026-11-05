@@ -4,6 +4,8 @@ import type { Config } from '../src/config.js';
 import type { AnalyzerContext } from '../src/analyzers/types.js';
 import type { SniffedContainer } from '../src/pipeline/sniff.js';
 import { probeFile, type ProbeData } from '../src/media/probe.js';
+import { measureLoudness, type LoudnessMeasurement } from '../src/media/loudness.js';
+import { publicAddressPolicy, type AddressPolicy } from '../src/net/ssrf.js';
 
 export const TEST_SECRET = 'test-secret';
 
@@ -38,11 +40,17 @@ export function fakeResolveBinaries(): Promise<BinaryReport> {
 export function makeAnalyzerContext(
   sourcePath: string,
   container: SniffedContainer,
-  overrides: { job?: Partial<AnalyzerContext['job']>; config?: Partial<Config>; tmpDir?: string } = {},
+  overrides: {
+    job?: Partial<AnalyzerContext['job']>;
+    config?: Partial<Config>;
+    tmpDir?: string;
+    policy?: AddressPolicy;
+  } = {},
 ): AnalyzerContext {
   const config: Config = { ...testConfig, analyzerTimeoutMs: 30_000, ...overrides.config };
   const signal = new AbortController().signal;
-  let memo: Promise<ProbeData> | undefined;
+  let probeMemo: Promise<ProbeData> | undefined;
+  let loudnessMemo: Promise<LoudnessMeasurement> | undefined;
   return {
     job: {
       jobId: 'test-job',
@@ -56,9 +64,16 @@ export function makeAnalyzerContext(
     container,
     config,
     signal,
+    policy: overrides.policy ?? publicAddressPolicy,
     probe: () =>
-      (memo ??= probeFile(sourcePath, {
+      (probeMemo ??= probeFile(sourcePath, {
         ffprobePath: config.binaries.ffprobe,
+        timeoutMs: config.analyzerTimeoutMs,
+        signal,
+      })),
+    measureLoudness: () =>
+      (loudnessMemo ??= measureLoudness(sourcePath, {
+        ffmpegPath: config.binaries.ffmpeg,
         timeoutMs: config.analyzerTimeoutMs,
         signal,
       })),

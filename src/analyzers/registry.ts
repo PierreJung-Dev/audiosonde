@@ -1,5 +1,7 @@
 import type { Analyzer } from './types.js';
 import { metadataAnalyzer } from './metadata.js';
+import { loudnessAnalyzer } from './loudness.js';
+import { transcodeAnalyzer } from './transcode.js';
 import { noopAnalyzer } from './noop.js';
 
 /**
@@ -12,7 +14,12 @@ import { noopAnalyzer } from './noop.js';
  * perform. The registry grows milestone by milestone (M2 metadata, M3
  * loudness + transcode, M4 peaks, M5 bpm + key).
  */
-export const ANALYZERS: readonly Analyzer[] = [metadataAnalyzer, noopAnalyzer];
+export const ANALYZERS: readonly Analyzer[] = [
+  metadataAnalyzer,
+  loudnessAnalyzer, // before transcode: normalization reuses its measurement
+  transcodeAnalyzer,
+  noopAnalyzer,
+];
 
 export const AVAILABLE_ANALYSES: ReadonlySet<string> = new Set(ANALYZERS.map((a) => a.name));
 
