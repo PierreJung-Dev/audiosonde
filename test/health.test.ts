@@ -34,10 +34,30 @@ describe('health endpoints', () => {
     expect(body.binaries.audiowaveform?.version).toBe('1.10.3');
   });
 
-  it('GET /readyz returns 200 ready (no binary required in M0)', async () => {
+  it('GET /readyz returns 200 ready when required binaries are present', async () => {
     const res = await app.inject({ method: 'GET', url: '/readyz' });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { status: string };
     expect(body.status).toBe('ready');
+  });
+
+  it('GET /readyz returns 503 when a required binary is missing', async () => {
+    const broken = buildServer({
+      config: testConfig,
+      loggerEnabled: false,
+      resolveBinaries: () =>
+        Promise.resolve({
+          ffmpeg: { available: true, version: '6.1.1' },
+          ffprobe: { available: false, version: null },
+          audiowaveform: { available: true, version: '1.10.3' },
+        }),
+    });
+    await broken.ready();
+    const res = await broken.inject({ method: 'GET', url: '/readyz' });
+    expect(res.statusCode).toBe(503);
+    const body = res.json() as { status: string; missing: string[] };
+    expect(body.status).toBe('not_ready');
+    expect(body.missing).toContain('ffprobe');
+    await broken.close();
   });
 });

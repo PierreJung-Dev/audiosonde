@@ -1,6 +1,7 @@
 import type { Config } from '../config.js';
 import type { JobRequest } from '../schema/job.js';
 import type { SniffedContainer } from '../pipeline/sniff.js';
+import type { ProbeData } from '../media/probe.js';
 
 /**
  * Analyzer module shape (see docs/architecture.md): filesystem in, JSON out.
@@ -21,6 +22,8 @@ export interface AnalyzerContext {
   readonly config: Config;
   /** Aborts when the overall job deadline passes. */
   readonly signal: AbortSignal;
+  /** Shared ffprobe pass over the source — memoized, one probe per job. */
+  probe(): Promise<ProbeData>;
 }
 
 export interface Analyzer {

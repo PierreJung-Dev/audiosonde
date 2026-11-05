@@ -1,5 +1,9 @@
+import { tmpdir } from 'node:os';
 import type { BinaryReport } from '../src/binaries.js';
 import type { Config } from '../src/config.js';
+import type { AnalyzerContext } from '../src/analyzers/types.js';
+import type { SniffedContainer } from '../src/pipeline/sniff.js';
+import { probeFile, type ProbeData } from '../src/media/probe.js';
 
 export const TEST_SECRET = 'test-secret';
 
@@ -25,4 +29,38 @@ export const fakeBinaries: BinaryReport = {
 
 export function fakeResolveBinaries(): Promise<BinaryReport> {
   return Promise.resolve(fakeBinaries);
+}
+
+/**
+ * A real AnalyzerContext over a local file (no HTTP), for analyzer unit and
+ * golden tests. Uses the actual binaries from PATH and a generous timeout.
+ */
+export function makeAnalyzerContext(
+  sourcePath: string,
+  container: SniffedContainer,
+  overrides: { job?: Partial<AnalyzerContext['job']>; config?: Partial<Config>; tmpDir?: string } = {},
+): AnalyzerContext {
+  const config: Config = { ...testConfig, analyzerTimeoutMs: 30_000, ...overrides.config };
+  const signal = new AbortController().signal;
+  let memo: Promise<ProbeData> | undefined;
+  return {
+    job: {
+      jobId: 'test-job',
+      source: { url: 'https://source.invalid/fixture' },
+      analyses: ['metadata'],
+      callback: { url: 'https://callback.invalid/cb' },
+      ...overrides.job,
+    },
+    sourcePath,
+    tmpDir: overrides.tmpDir ?? tmpdir(),
+    container,
+    config,
+    signal,
+    probe: () =>
+      (memo ??= probeFile(sourcePath, {
+        ffprobePath: config.binaries.ffprobe,
+        timeoutMs: config.analyzerTimeoutMs,
+        signal,
+      })),
+  };
 }

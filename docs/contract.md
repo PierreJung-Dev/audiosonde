@@ -103,6 +103,9 @@ for jobs stuck in `processing`).
       "durationMs": 214032, "sampleRate": 44100, "channels": 2, "bitDepth": 24,
       "bitrateKbps": 2116, "container": "wav", "codec": "pcm_s24le",
       "tags": { "title": "…", "artist": "…" }              // embedded tags (ID3 etc.), may be {}
+      // bitDepth is null for codecs without a fixed depth (mp3, vorbis, opus …);
+      // container comes from magic-bytes detection (wav|flac|mp3|ogg|aiff|mp4|asf|…),
+      // never from the file extension; tag keys are lowercased.
     },
     "loudness": { "integratedLufs": -9.8, "truePeakDbtp": -0.3, "loudnessRange": 6.2 },
     "transcode": { "uploaded": true, "format": "opus", "bitrateKbps": 128, "byteSize": 3812345, "normalizedToLufs": -14 },

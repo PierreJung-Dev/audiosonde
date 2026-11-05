@@ -7,10 +7,10 @@ export interface ReadyzDeps {
 
 /**
  * Binaries that must be available for the engine to be "ready".
- * Empty in M0 (no analyzer runs yet) so dev without binaries isn't blocked;
- * tightened as analyzers land (e.g. ffmpeg/ffprobe from M2, audiowaveform M4).
+ * Grows as analyzers land: ffprobe since M2 (metadata), ffmpeg from M3
+ * (loudness/transcode), audiowaveform from M4 (peaks).
  */
-const REQUIRED_BINARIES: readonly (keyof BinaryReport)[] = [];
+const REQUIRED_BINARIES: readonly (keyof BinaryReport)[] = ['ffprobe'];
 
 export function registerReadyz(app: FastifyInstance, deps: ReadyzDeps): void {
   // Readiness: 503 when a required binary is missing, so an orchestrator can

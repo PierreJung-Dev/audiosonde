@@ -7,6 +7,7 @@ import type { JobRequest } from '../schema/job.js';
 import { ALGO_VERSIONS, analyzersFor } from '../analyzers/registry.js';
 import type { Analyzer, AnalyzerContext } from '../analyzers/types.js';
 import { publicAddressPolicy, type AddressPolicy } from '../net/ssrf.js';
+import { probeFile, type ProbeData } from '../media/probe.js';
 import { ENGINE_VERSION } from '../version.js';
 import { dispatchCallback } from './callback.js';
 import { fetchSource } from './fetch.js';
@@ -124,6 +125,7 @@ export class JobRunner {
       });
       downloadMs = fetched.downloadMs;
 
+      let probePromise: Promise<ProbeData> | undefined;
       const ctx: AnalyzerContext = {
         job,
         sourcePath,
@@ -131,6 +133,12 @@ export class JobRunner {
         container: fetched.container,
         config: this.config,
         signal,
+        probe: () =>
+          (probePromise ??= probeFile(sourcePath, {
+            ffprobePath: this.config.binaries.ffprobe,
+            timeoutMs: this.config.analyzerTimeoutMs,
+            signal,
+          })),
       };
 
       for (const analyzer of analyzersFor(job.analyses)) {
