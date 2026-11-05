@@ -52,20 +52,40 @@ describe('POST /v1/jobs', () => {
     expect(res.json()).toMatchObject({ accepted: true, jobId: 'job-1' });
   });
 
-  it('422 when requesting a contract analysis not available in this build', async () => {
-    // transcode/peaks are contract-valid but land in M3/M4 — the engine never
-    // accepts work it cannot perform.
+  it('202 on a valid signed job with transcode + peaks output slots', async () => {
     const res = await post(app, {
       ...validJob,
       analyses: ['transcode', 'peaks'],
       outputs: {
         transcode: { putUrl: 'https://s3.invalid/put', format: 'opus', bitrateKbps: 128, targetLufs: -14 },
-        peaks: { putUrl: 'https://s3.invalid/peaks', format: 'audiowaveform-dat', zoomLevels: [256, 1024] },
+        peaks: {
+          format: 'audiowaveform-dat',
+          levels: [
+            { zoom: 256, putUrl: 'https://s3.invalid/peaks-256' },
+            { zoom: 1024, putUrl: 'https://s3.invalid/peaks-1024' },
+          ],
+        },
       },
     });
+    expect(res.statusCode).toBe(202);
+  });
+
+  it('422 when requesting a contract analysis not available in this build', async () => {
+    // bpm/key are contract-valid but land in M5 — the engine never accepts
+    // work it cannot perform.
+    const res = await post(app, { ...validJob, analyses: ['bpm'] });
     expect(res.statusCode).toBe(422);
     const issues = (res.json() as { issues: string[] }).issues;
     expect(issues.some((i) => i.includes('not available in this build'))).toBe(true);
+  });
+
+  it('400 on a peaks slot with no levels', async () => {
+    const res = await post(app, {
+      ...validJob,
+      analyses: ['peaks'],
+      outputs: { peaks: { format: 'json', levels: [] } },
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   it('400 on a malformed contentHash', async () => {

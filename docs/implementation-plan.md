@@ -52,8 +52,9 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M4 — `peaks` analyzer (audiowaveform)
 
-- [ ] Multi-zoom peaks (`audiowaveform-dat` binary format + `json` option), uploaded via
-      signed PUT; format documented for consumers (zoom levels, bit resolution).
+- [x] Multi-zoom peaks (`audiowaveform-dat` binary format + `json` option), uploaded via
+      signed PUT (one artifact per zoom level — see decisions/0004); format documented
+      for consumers in [peaks-format.md](peaks-format.md) (zoom levels, bit resolution).
 - **AC**: golden byte-compare on fixtures; a caller can render the waveform from the `.dat`
   output (documented decode example).
 

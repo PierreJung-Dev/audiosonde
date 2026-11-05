@@ -2,6 +2,7 @@ import type { Analyzer } from './types.js';
 import { metadataAnalyzer } from './metadata.js';
 import { loudnessAnalyzer } from './loudness.js';
 import { transcodeAnalyzer } from './transcode.js';
+import { peaksAnalyzer } from './peaks.js';
 import { noopAnalyzer } from './noop.js';
 
 /**
@@ -18,6 +19,7 @@ export const ANALYZERS: readonly Analyzer[] = [
   metadataAnalyzer,
   loudnessAnalyzer, // before transcode: normalization reuses its measurement
   transcodeAnalyzer,
+  peaksAnalyzer,
   noopAnalyzer,
 ];
 

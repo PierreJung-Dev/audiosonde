@@ -43,10 +43,21 @@ export const transcodeOutputSchema = z.object({
   targetLufs: z.number().optional(),
 });
 
+// A .dat/json peaks artifact holds exactly ONE zoom level, so each requested
+// level carries its own signed PUT URL (see docs/decisions/0004).
 export const peaksOutputSchema = z.object({
-  putUrl: httpUrl,
   format: z.enum(['audiowaveform-dat', 'json']),
-  zoomLevels: z.array(z.number().int().positive()).nonempty(),
+  levels: z
+    .array(
+      z.object({
+        /** Samples per pixel (audiowaveform -z); 2 is the tool's minimum. */
+        zoom: z.number().int().min(2),
+        putUrl: httpUrl,
+      }),
+    )
+    .nonempty()
+    .max(8),
+  bits: z.union([z.literal(8), z.literal(16)]).optional(),
 });
 
 export const jobRequestSchema = z.object({
