@@ -7,7 +7,8 @@ require a new version prefix (`/v2`); additive changes are allowed within v1.
 
 ```
 POST /v1/jobs        accept an analysis job          → 202 { accepted }
-GET  /healthz        liveness (no auth)              → 200 { status, version }
+GET  /healthz        liveness (no auth)              → 200 { status, version, binaries }
+GET  /readyz         readiness (no auth)             → 200 ready / 503 not_ready
 POST <callback.url>  audiosonde → caller, signed     (result delivery)
 ```
 
@@ -28,6 +29,13 @@ X-Audiosonde-Signature: t=<unix-seconds>,v1=<hex(hmac_sha256(secret, `${t}.${raw
 - Outbound (callback): signed by audiosonde with the same secret. Callers must verify.
 - Queues that forward custom headers (e.g. QStash `Upstash-Forward-X-Audiosonde-Signature`)
   can sign at enqueue time.
+- **Rotation**: the engine accepts a current secret (`AUDIOSONDE_SECRET`) and an optional
+  previous one (`AUDIOSONDE_SECRET_PREVIOUS`) on inbound requests; callbacks are always signed
+  with the current secret. Rotate by moving the old secret to `…_PREVIOUS` and the new one to
+  `AUDIOSONDE_SECRET`, then dropping `…_PREVIOUS` once all callers have migrated.
+- **Replay**: the `±300s` window is the only replay protection — the engine keeps no nonce
+  store (it is stateless by design). A valid request replayed within the window re-runs the
+  job; idempotency is the caller's responsibility (see below).
 
 ## `POST /v1/jobs`
 
@@ -121,6 +129,34 @@ The engine is stateless: submitting the same `jobId` twice runs twice. Idempoten
 **caller's** contract — key your own cache on `contentHash + algoVersions`. audiosonde
 guarantees determinism: same input bytes + same `engine.algoVersions` ⇒ same measurements.
 Any behavior change in an analyzer bumps its `algoVersion`.
+
+## Health & readiness
+
+Two unauthenticated endpoints, for orchestrators:
+
+- `GET /healthz` — **liveness**. `200` while the process is up, with the engine version and
+  the resolved binary versions: `{ "status": "ok", "version": "0.0.0", "binaries": { "ffmpeg":
+  { "available": true, "version": "6.1.1" }, "ffprobe": {…}, "audiowaveform": {…} } }`.
+- `GET /readyz` — **readiness**. `200 { "status": "ready", … }` when every *required* binary is
+  present; `503 { "status": "not_ready", "missing": [...] }` otherwise, so a broken container is
+  kept out of rotation. Which binaries are required grows as analyzers are enabled.
+
+## Failure & durability model
+
+audiosonde is **best-effort and in-memory** between accepting a job (`202`) and delivering its
+callback. There is no persistence (by design): if the process is killed or the container
+restarts while a job is in flight — downloading, analyzing, or waiting to retry a callback —
+**that job is lost silently**. No callback is sent, and there is no status endpoint to query it
+in v1.
+
+Callers own durability:
+
+- Treat `202` as "accepted for best-effort processing", not "guaranteed to complete".
+- Keep your own job state and **reconcile**: sweep for jobs still `processing` past a deadline
+  and resubmit. Your queue retries *submission*; audiosonde only retries the *callback* (5
+  attempts, backoff).
+- A callback may arrive up to 5 times (retries), or never (crash in flight). Make your callback
+  handler **idempotent on `jobId`**.
 
 ## Limits (engine defaults, overridable by env)
 

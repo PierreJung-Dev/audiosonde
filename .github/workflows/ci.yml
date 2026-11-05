@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# NOTE: Blacksmith runners (blacksmith-*-ubuntu-*) require the repo to live under
+# a GitHub organization with the Blacksmith app installed — they do not work on
+# personal repositories. Using GitHub-hosted runners for now. To switch back once
+# audiosonde is under its own org: set runs-on to blacksmith-4vcpu-ubuntu-2404 and
+# restore the Blacksmith docker builder (useblacksmith/setup-docker-builder +
+# useblacksmith/build-push-action) for layer caching.
+
+jobs:
+  check:
+    name: lint · typecheck · test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  docker:
+    name: docker build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t audiosonde:ci .

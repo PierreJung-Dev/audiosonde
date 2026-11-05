@@ -34,7 +34,9 @@
 
 ## Security model
 
-- **HMAC both ways** (see contract) with a replay window; constant-time comparison.
+- **HMAC both ways** (see contract) with a replay window; constant-time comparison. Inbound
+  verification accepts a current + optional previous secret (zero-downtime rotation); the
+  `±300s` window is the only replay protection (no nonce store — stateless by design).
 - **SSRF guards**: http(s) only; resolve DNS and reject private/link-local/loopback ranges
   (including on redirects, max 3); apply to source fetch AND callback POST.
 - **Zero storage credentials**: only caller-signed URLs. The engine can be pointed at any
@@ -50,8 +52,13 @@
   = more replicas; backpressure via bounded concurrency + `429`.
 - **Queue-agnostic**: any HTTP producer works. Trackout uses QStash with header forwarding;
   retries of *submission* are the queue's job, retries of *callback* are ours.
-- **Observability**: structured JSON logs (jobId-scoped), `/healthz` with binary versions,
-  timings in every callback; optional Prometheus `/metrics` (M6).
+- **Observability**: structured JSON logs (jobId-scoped), `/healthz` (liveness + binary
+  versions) and `/readyz` (readiness, 503 when a required binary is missing), timings in every
+  callback; optional Prometheus `/metrics` (M6).
+- **Durability is best-effort**: processing is in-memory between `202` and callback; a crash or
+  restart drops in-flight jobs silently (no persistence by design). Callers own reconciliation
+  and must make their callback handler idempotent on `jobId` (see contract: Failure & durability
+  model).
 - **Config via env**: `AUDIOSONDE_SECRET`, `PORT`, `MAX_CONCURRENT_JOBS`, `MAX_SOURCE_BYTES`,
   `MAX_DURATION_MS`, `JOB_TIMEOUT_MS`, binary path overrides. Fail-closed: refuse to boot
   without a secret.

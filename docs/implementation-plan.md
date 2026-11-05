@@ -5,13 +5,20 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M0 — Scaffold & walking skeleton
 
-- [ ] TypeScript strict + ESM + pnpm; Fastify server with `GET /healthz` (reports engine
+- [x] TypeScript strict + ESM + pnpm; Fastify server with `GET /healthz` (reports engine
       version + resolved `ffmpeg`/`ffprobe`/`audiowaveform` versions).
-- [ ] HMAC middleware (scheme from [contract.md](contract.md)) with unit tests (valid,
+- [x] HMAC middleware (scheme from [contract.md](contract.md)) with unit tests (valid,
       invalid, replayed, malformed).
-- [ ] `POST /v1/jobs`: zod validation of the full v1 request shape → `202`/`400`/`401`/`422`.
-- [ ] Dockerfile (Debian slim, pinned ffmpeg + audiowaveform), builds and runs.
-- [ ] CI (GitHub Actions): lint (eslint), typecheck, vitest, docker build.
+- [x] `POST /v1/jobs`: zod validation of the full v1 request shape → `202`/`400`/`401`/`422`.
+- [x] Dockerfile (Debian slim, pinned ffmpeg + audiowaveform `1.10.2`); builds via CI.
+- [ ] CI (GitHub Actions on Blacksmith): lint (eslint), typecheck, vitest, docker build —
+      *written; pending first green run on the PR.*
+- Add-ons (decided during M0 kickoff):
+  - [x] `GET /readyz` readiness endpoint (503 when a required binary is missing; none required
+        in M0).
+  - [x] Multi-secret inbound verification (`AUDIOSONDE_SECRET` + `…_PREVIOUS`) for rotation.
+  - [x] Boot log of effective limits (concurrency, size/duration caps, timeouts).
+  - [x] Docs: Failure & durability model + replay tradeoff (contract + architecture).
 - **AC**: container boots without warnings, `/healthz` lists binary versions, signed request
   → 202 / unsigned → 401, CI green.
 

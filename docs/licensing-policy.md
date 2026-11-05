@@ -50,12 +50,19 @@ licensed sources and never committed.
 
 | Dependency | Kind | License (code) | Weights/data | Notes |
 |---|---|---|---|---|
-| fastify | npm | MIT | — | planned (M0) |
-| zod | npm | MIT | — | planned (M0) |
-| execa | npm | MIT | — | planned (M0) |
-| vitest | npm (dev) | MIT | — | planned (M0) |
-| ffmpeg / ffprobe | binary (subprocess) | LGPL/GPL build | — | planned (M2/M3); no `--enable-nonfree` |
-| audiowaveform (BBC) | binary (subprocess) | GPL-3.0 | — | planned (M4) |
+| fastify | npm | MIT | — | added (M0) |
+| zod | npm | MIT | — | added (M0) |
+| execa | npm | MIT | — | added (M0) |
+| typescript | npm (dev) | Apache-2.0 | — | added (M0) |
+| tsx | npm (dev) | MIT | — | added (M0) |
+| vitest | npm (dev) | MIT | — | added (M0) |
+| eslint | npm (dev) | MIT | — | added (M0) |
+| @eslint/js | npm (dev) | MIT | — | added (M0) |
+| typescript-eslint | npm (dev) | MIT | — | added (M0) |
+| @types/node | npm (dev) | MIT | — | added (M0) |
+| globals | npm (dev) | MIT | — | added (M0) |
+| ffmpeg / ffprobe | binary (subprocess) | LGPL/GPL build | — | in image (M0); used M2/M3; no `--enable-nonfree` |
+| audiowaveform (BBC) | binary (subprocess) | GPL-3.0 | — | in image (M0) pinned `1.10.2`; used M4 |
 | essentia.js | npm/WASM | AGPL-3.0 | ⚠️ MTG model weights are NC — **code only, never the models** | M5 candidate |
 | aubio | binary (subprocess) | GPL-3.0 | — | M5 candidate |
 
