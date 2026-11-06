@@ -5,10 +5,10 @@
 > signed HTTP contract. Like a [radiosonde](https://en.wikipedia.org/wiki/Radiosonde), but
 > for audio.
 
-**Status: pre-implementation (spec-first).** The contract, architecture and milestones are
-fully specified in [`docs/`](docs/); implementation starts at
-[M0](docs/implementation-plan.md). Built to power [Trackout](https://trackout.app), designed
-to be useful to anyone.
+**Status: in development — milestones M0–M4 implemented** (HTTP contract & signatures, the
+full pipeline, `metadata`, `loudness`, `transcode`, `peaks`); BPM/key (M5) and hardening +
+publication (M6) remain — see [docs/implementation-plan.md](docs/implementation-plan.md).
+Built to power [Trackout](https://trackout.app), designed to be useful to anyone.
 
 ## Design principles
 
@@ -45,10 +45,10 @@ caller ◀──POST callback (HMAC)── result JSON (measurements + algo vers
 
 | Analyzer | Output | Status |
 |---|---|---|
-| `metadata` | duration, sample rate, channels, bit depth, bitrate, container/codec, embedded tags | planned (M2) |
-| `loudness` | integrated LUFS, true peak (dBTP), loudness range | planned (M3) |
-| `transcode` | streaming derivative (MP3 or Opus), LUFS-normalized | planned (M3) |
-| `peaks` | multi-zoom waveform peaks (audiowaveform format) | planned (M4) |
+| `metadata` | duration, sample rate, channels, bit depth, bitrate, container/codec, embedded tags | ✅ implemented (M2) |
+| `loudness` | integrated LUFS, true peak (dBTP), loudness range | ✅ implemented (M3) |
+| `transcode` | streaming derivative (MP3 or Opus), LUFS-normalized | ✅ implemented (M3) |
+| `peaks` | multi-zoom waveform peaks ([format guide](docs/peaks-format.md)) | ✅ implemented (M4) |
 | `bpm` / `key` | tempo + musical key/scale, with confidence | planned (M5) |
 | `sections` | song structure (intro/verse/chorus…) | future |
 | `tags` | genre & descriptor tags | future (see [licensing policy](docs/licensing-policy.md)) |

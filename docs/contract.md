@@ -57,9 +57,13 @@ X-Audiosonde-Signature: t=<unix-seconds>,v1=<hex(hmac_sha256(secret, `${t}.${raw
       "targetLufs": -14                      // omit to skip loudness normalization
     },
     "peaks": {
-      "putUrl": "https://…signed-put…",
-      "format": "audiowaveform-dat",         // binary .dat (v2); "json" also supported
-      "zoomLevels": [256, 1024, 4096]        // samples per pixel
+      "format": "audiowaveform-dat",         // binary .dat; "json" also supported
+      "levels": [                            // ONE artifact per zoom level (a .dat/json
+        { "zoom": 256,  "putUrl": "https://…signed-put…" },   // file holds exactly one
+        { "zoom": 1024, "putUrl": "https://…signed-put…" },   // resolution) — max 8
+        { "zoom": 4096, "putUrl": "https://…signed-put…" }    // zoom = samples per pixel
+      ],
+      "bits": 8                              // optional: 8 (default) | 16
     }
   },
   "callback": {
@@ -109,7 +113,10 @@ for jobs stuck in `processing`).
     },
     "loudness": { "integratedLufs": -9.8, "truePeakDbtp": -0.3, "loudnessRange": 6.2 },
     "transcode": { "uploaded": true, "format": "opus", "bitrateKbps": 128, "byteSize": 3812345, "normalizedToLufs": -14 },
-    "peaks": { "uploaded": true, "format": "audiowaveform-dat", "zoomLevels": [256, 1024, 4096], "byteSize": 182044 },
+    "peaks": { "uploaded": true, "format": "audiowaveform-dat", "zoomLevels": [256, 1024, 4096],
+               "byteSize": 182044,            // total across all level artifacts
+               "levels": [ { "zoom": 256, "byteSize": 120000 }, { "zoom": 1024, "byteSize": 42044 }, { "zoom": 4096, "byteSize": 20000 } ],
+               "bits": 8 },                   // artifact layout: see peaks-format.md
     "bpm": { "value": 128.0, "confidence": 0.87 },
     "key": { "key": "F#", "scale": "minor", "confidence": 0.74 },
     "sections": null,                         // reserved (future analyzer): [{startMs,endMs,label,confidence}]

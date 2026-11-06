@@ -30,7 +30,13 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       # ffmpeg/ffprobe: fixture generation at test bootstrap + analyzer tests (M2+).
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      # audiowaveform (BBC PPA — no Ubuntu asset on the GitHub release): peaks tests (M4).
+      # Golden peaks tests byte-compare engine output against the SAME local binary,
+      # so a PPA version differing from the Docker image's pin does not bite.
+      - run: |
+          sudo add-apt-repository -y ppa:chris-needham/ppa
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg audiowaveform
       - run: pnpm test
 
   docker:
