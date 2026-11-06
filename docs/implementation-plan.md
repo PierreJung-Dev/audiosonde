@@ -60,17 +60,19 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M5 — `bpm` + `key` analyzers (measured decision)
 
-- [ ] Build the reference set: scripted download of openly licensed tracks with known
-      BPM/key (+ generated click-tracks/chord stems). Never committed to the repo.
-- [ ] Benchmark ≥2 candidates (essentia.js WASM — AGPL ok here; aubio subprocess; optional:
-      keyfinder) on the reference set; record accuracy, speed, footprint in
-      `docs/decisions/0001-bpm-key-library.md`.
-- [ ] Implement the winner with confidence scores; set accuracy floors from the measured
-      baseline (target order of magnitude: BPM within ±2% or half/double detection flagged,
-      on ≥90% of the set; key exact-or-relative on the majority — finalize numbers in the
-      decision doc).
-- **AC**: benchmark reproducible via one script; accuracy floors asserted in CI (on the
-  generated subset) and documented for the full set.
+- [x] Build the reference set: GiantSteps tempo (661) + key (604) — open annotations,
+      audio fetched at bench time from the maintainers' JKU mirror (md5-verified, never
+      committed) — plus generated click-tracks/cadences (`pnpm bench:synthetic|fetch`).
+- [x] Benchmark candidates (aubio subprocess; essentia.js Percival + RhythmExtractor2013;
+      KeyExtractor temperley/krumhansl/edma) and two confidence mechanisms; accuracy,
+      speed and calibration recorded in
+      [decisions/0005-bpm-key-library.md](decisions/0005-bpm-key-library.md).
+- [x] Implemented the winners (Percival + split-half confidence; KeyExtractor edma +
+      strength) with accuracy floors from the measured baseline: BPM ±2% octave-tolerant
+      95.9% on the full set (target ≥90% met) and 5/5 on the generated subset; key
+      exact-or-relative 63.9% (majority met) and ≥23/24 exact on the generated subset.
+- **AC**: benchmark reproducible via one script (`pnpm bench:run --set …`); accuracy
+  floors asserted in CI (test/bpm-key.test.ts) and documented for the full set. ✅
 
 ## M6 — Hardening & publication readiness
 

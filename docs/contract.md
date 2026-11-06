@@ -100,7 +100,7 @@ for jobs stuck in `processing`).
   "status": "done",                          // "done" | "failed" | "partial"
   "engine": {
     "version": "0.3.1",                      // audiosonde release
-    "algoVersions": { "metadata": 1, "loudness": 1, "transcode": 1, "peaks": 1, "bpm": 2, "key": 1 }
+    "algoVersions": { "metadata": 1, "loudness": 1, "transcode": 1, "peaks": 1, "bpm": 1, "key": 1 }
   },
   "result": {
     "metadata": {
@@ -117,8 +117,8 @@ for jobs stuck in `processing`).
                "byteSize": 182044,            // total across all level artifacts
                "levels": [ { "zoom": 256, "byteSize": 120000 }, { "zoom": 1024, "byteSize": 42044 }, { "zoom": 4096, "byteSize": 20000 } ],
                "bits": 8 },                   // artifact layout: see peaks-format.md
-    "bpm": { "value": 128.0, "confidence": 0.87 },
-    "key": { "key": "F#", "scale": "minor", "confidence": 0.74 },
+    "bpm": { "value": 128.0, "confidence": 0.9 },             // confidence tiers 0.9 | 0.6 | 0.3 — see "BPM & key"
+    "key": { "key": "F#", "scale": "minor", "confidence": 0.74 }, // tonic ∈ {C, C#, D, …, B} (sharps only)
     "sections": null,                         // reserved (future analyzer): [{startMs,endMs,label,confidence}]
     "tags": null                              // reserved (future analyzer): [{label,confidence,taxonomy}]
   },
@@ -187,6 +187,25 @@ unsigned): `transcode` mp3 → `audio/mpeg`, opus → `audio/ogg`; `peaks`
 `audiowaveform-dat` → `application/octet-stream`, json → `application/json`.
 A rejected/expired PUT yields `ARTIFACT_UPLOAD_FAILED` for that analyzer (job becomes
 `"partial"` if others succeeded).
+
+## BPM & key
+
+Both analyzers work on ONE shared, deterministic analysis window: mono 44.1 kHz, at most
+180 s, centered in the source (short sources are analyzed whole). Measurements and the
+library decision are recorded in
+[decisions/0005-bpm-key-library.md](decisions/0005-bpm-key-library.md).
+
+- `bpm.value` is the raw tempo estimate (one decimal), with **no octave folding**: a
+  drum&bass track may legitimately report 87.0 where a human would say 174 — the estimate
+  is within ±2% of the true tempo *or* a {2, ½, 3, ⅓} multiple of it for ≥95% of the
+  benchmark set. Apply your own genre prior if you need a preferred range.
+- `bpm.confidence` is tiered, calibrated on the benchmark: `0.9` (estimates on both window
+  halves agree with the full-window estimate — 97.5% measured accuracy), `0.6` (one half
+  agrees), `0.3` (neither — 63% measured accuracy).
+- `key.key` is the tonic, always sharp-spelled (`C`, `C#`, `D`, `D#`, `E`, `F`, `F#`, `G`,
+  `G#`, `A`, `A#`, `B`); `key.scale` is `"major"` or `"minor"`. `key.confidence` is the
+  detector's key strength (0..1): values below ~0.55 were almost never exact on the
+  benchmark; treat them as "unknown".
 
 ## Limits (engine defaults, overridable by env)
 

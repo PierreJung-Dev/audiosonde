@@ -11,4 +11,5 @@ tmp/
 # generated test fixtures & benchmark audio (never commit audio)
 test/.fixtures/
 test/fixtures/generated/
-bench/audio/
+bench/.data/
+bench/results/

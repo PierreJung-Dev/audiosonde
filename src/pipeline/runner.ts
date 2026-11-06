@@ -9,6 +9,7 @@ import type { Analyzer, AnalyzerContext } from '../analyzers/types.js';
 import { publicAddressPolicy, type AddressPolicy } from '../net/ssrf.js';
 import { probeFile, type ProbeData } from '../media/probe.js';
 import { measureLoudness, type LoudnessMeasurement } from '../media/loudness.js';
+import { decodePcmWindow, type PcmWindow } from '../media/pcm.js';
 import { ENGINE_VERSION } from '../version.js';
 import { dispatchCallback } from './callback.js';
 import { fetchSource } from './fetch.js';
@@ -128,6 +129,13 @@ export class JobRunner {
 
       let probePromise: Promise<ProbeData> | undefined;
       let loudnessPromise: Promise<LoudnessMeasurement> | undefined;
+      let pcmPromise: Promise<PcmWindow> | undefined;
+      const getProbe = (): Promise<ProbeData> =>
+        (probePromise ??= probeFile(sourcePath, {
+          ffprobePath: this.config.binaries.ffprobe,
+          timeoutMs: this.config.analyzerTimeoutMs,
+          signal,
+        }));
       const ctx: AnalyzerContext = {
         job,
         sourcePath,
@@ -136,18 +144,25 @@ export class JobRunner {
         config: this.config,
         signal,
         policy: this.policy,
-        probe: () =>
-          (probePromise ??= probeFile(sourcePath, {
-            ffprobePath: this.config.binaries.ffprobe,
-            timeoutMs: this.config.analyzerTimeoutMs,
-            signal,
-          })),
+        probe: getProbe,
         measureLoudness: () =>
           (loudnessPromise ??= measureLoudness(sourcePath, {
             ffmpegPath: this.config.binaries.ffmpeg,
             timeoutMs: this.config.analyzerTimeoutMs,
             signal,
           })),
+        pcmWindow: () =>
+          (pcmPromise ??= (async (): Promise<PcmWindow> => {
+            const probe = await getProbe();
+            const raw = probe.format.duration ?? probe.audioStream.duration;
+            const parsed = raw === undefined ? NaN : Number(raw);
+            return decodePcmWindow(sourcePath, {
+              ffmpegPath: this.config.binaries.ffmpeg,
+              durationSeconds: Number.isFinite(parsed) ? parsed : null,
+              timeoutMs: this.config.analyzerTimeoutMs,
+              signal,
+            });
+          })()),
       };
 
       await this.enforceDurationCap(job, ctx);

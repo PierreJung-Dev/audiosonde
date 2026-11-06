@@ -30,6 +30,12 @@ export interface ServerDeps {
   tmpRoot?: string;
   /** Shrink the callback retry backoff base (tests). */
   callbackBaseDelayMs?: number;
+  /**
+   * Override the build's available-analysis set (tests simulate a build with
+   * fewer analyzers to exercise the 422 path). NEVER set in production
+   * wiring — the registry is the truth.
+   */
+  availableAnalyses?: ReadonlySet<string>;
 }
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
@@ -84,7 +90,11 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   registerHealthz(app, { getBinaries });
   registerReadyz(app, { getBinaries });
-  registerJobs(app, { config, runner });
+  registerJobs(app, {
+    config,
+    runner,
+    ...(deps.availableAnalyses !== undefined ? { availableAnalyses: deps.availableAnalyses } : {}),
+  });
 
   return app;
 }

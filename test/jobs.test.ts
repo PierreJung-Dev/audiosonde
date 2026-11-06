@@ -71,12 +71,28 @@ describe('POST /v1/jobs', () => {
   });
 
   it('422 when requesting a contract analysis not available in this build', async () => {
-    // bpm/key are contract-valid but land in M5 — the engine never accepts
-    // work it cannot perform.
-    const res = await post(app, { ...validJob, analyses: ['bpm'] });
-    expect(res.statusCode).toBe(422);
-    const issues = (res.json() as { issues: string[] }).issues;
-    expect(issues.some((i) => i.includes('not available in this build'))).toBe(true);
+    // Every contract analysis is implemented as of M5, so simulate a smaller
+    // build via the DI seam — the engine never accepts work it cannot perform.
+    const smallBuild = buildServer({
+      config: testConfig,
+      loggerEnabled: false,
+      resolveBinaries: fakeResolveBinaries,
+      availableAnalyses: new Set(['metadata', 'noop']),
+    });
+    await smallBuild.ready();
+    try {
+      const res = await post(smallBuild, { ...validJob, analyses: ['bpm'] });
+      expect(res.statusCode).toBe(422);
+      const issues = (res.json() as { issues: string[] }).issues;
+      expect(issues.some((i) => i.includes('not available in this build'))).toBe(true);
+    } finally {
+      await smallBuild.close();
+    }
+  });
+
+  it('202 on a bpm + key job (available since M5)', async () => {
+    const res = await post(app, { ...validJob, analyses: ['bpm', 'key'] });
+    expect(res.statusCode).toBe(202);
   });
 
   it('400 on a peaks slot with no levels', async () => {

@@ -5,6 +5,7 @@ import type { AnalyzerContext } from '../src/analyzers/types.js';
 import type { SniffedContainer } from '../src/pipeline/sniff.js';
 import { probeFile, type ProbeData } from '../src/media/probe.js';
 import { measureLoudness, type LoudnessMeasurement } from '../src/media/loudness.js';
+import { decodePcmWindow, type PcmWindow } from '../src/media/pcm.js';
 import { publicAddressPolicy, type AddressPolicy } from '../src/net/ssrf.js';
 
 export const TEST_SECRET = 'test-secret';
@@ -51,6 +52,13 @@ export function makeAnalyzerContext(
   const signal = new AbortController().signal;
   let probeMemo: Promise<ProbeData> | undefined;
   let loudnessMemo: Promise<LoudnessMeasurement> | undefined;
+  let pcmMemo: Promise<PcmWindow> | undefined;
+  const getProbe = (): Promise<ProbeData> =>
+    (probeMemo ??= probeFile(sourcePath, {
+      ffprobePath: config.binaries.ffprobe,
+      timeoutMs: config.analyzerTimeoutMs,
+      signal,
+    }));
   return {
     job: {
       jobId: 'test-job',
@@ -65,17 +73,24 @@ export function makeAnalyzerContext(
     config,
     signal,
     policy: overrides.policy ?? publicAddressPolicy,
-    probe: () =>
-      (probeMemo ??= probeFile(sourcePath, {
-        ffprobePath: config.binaries.ffprobe,
-        timeoutMs: config.analyzerTimeoutMs,
-        signal,
-      })),
+    probe: getProbe,
     measureLoudness: () =>
       (loudnessMemo ??= measureLoudness(sourcePath, {
         ffmpegPath: config.binaries.ffmpeg,
         timeoutMs: config.analyzerTimeoutMs,
         signal,
       })),
+    pcmWindow: () =>
+      (pcmMemo ??= (async (): Promise<PcmWindow> => {
+        const probe = await getProbe();
+        const raw = probe.format.duration ?? probe.audioStream.duration;
+        const parsed = raw === undefined ? NaN : Number(raw);
+        return decodePcmWindow(sourcePath, {
+          ffmpegPath: config.binaries.ffmpeg,
+          durationSeconds: Number.isFinite(parsed) ? parsed : null,
+          timeoutMs: config.analyzerTimeoutMs,
+          signal,
+        });
+      })()),
   };
 }

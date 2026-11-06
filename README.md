@@ -5,9 +5,9 @@
 > signed HTTP contract. Like a [radiosonde](https://en.wikipedia.org/wiki/Radiosonde), but
 > for audio.
 
-**Status: in development — milestones M0–M4 implemented** (HTTP contract & signatures, the
-full pipeline, `metadata`, `loudness`, `transcode`, `peaks`); BPM/key (M5) and hardening +
-publication (M6) remain — see [docs/implementation-plan.md](docs/implementation-plan.md).
+**Status: in development — milestones M0–M5 implemented** (HTTP contract & signatures, the
+full pipeline, `metadata`, `loudness`, `transcode`, `peaks`, `bpm`, `key`); hardening +
+publication (M6) remains — see [docs/implementation-plan.md](docs/implementation-plan.md).
 Built to power [Trackout](https://trackout.app), designed to be useful to anyone.
 
 ## Design principles
@@ -49,7 +49,7 @@ caller ◀──POST callback (HMAC)── result JSON (measurements + algo vers
 | `loudness` | integrated LUFS, true peak (dBTP), loudness range | ✅ implemented (M3) |
 | `transcode` | streaming derivative (MP3 or Opus), LUFS-normalized | ✅ implemented (M3) |
 | `peaks` | multi-zoom waveform peaks ([format guide](docs/peaks-format.md)) | ✅ implemented (M4) |
-| `bpm` / `key` | tempo + musical key/scale, with confidence | planned (M5) |
+| `bpm` / `key` | tempo + musical key/scale, with confidence ([measured decision](docs/decisions/0005-bpm-key-library.md)) | ✅ implemented (M5) |
 | `sections` | song structure (intro/verse/chorus…) | future |
 | `tags` | genre & descriptor tags | future (see [licensing policy](docs/licensing-policy.md)) |
 

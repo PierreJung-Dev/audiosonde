@@ -8,10 +8,13 @@ import type { JobRunner } from '../pipeline/runner.js';
 export interface JobsDeps {
   config: Config;
   runner: JobRunner;
+  /** Override the build's analysis set (tests simulate smaller builds). */
+  availableAnalyses?: ReadonlySet<string>;
 }
 
 export function registerJobs(app: FastifyInstance, deps: JobsDeps): void {
   const { config, runner } = deps;
+  const availableAnalyses = deps.availableAnalyses ?? AVAILABLE_ANALYSES;
 
   app.post(
     '/v1/jobs',
@@ -38,7 +41,7 @@ export function registerJobs(app: FastifyInstance, deps: JobsDeps): void {
         return reply.code(400).send({ error: 'invalid_request', issues: parsed.error.issues });
       }
 
-      const semantic = validateSemantics(parsed.data, AVAILABLE_ANALYSES);
+      const semantic = validateSemantics(parsed.data, availableAnalyses);
       if (!semantic.ok) {
         return reply.code(422).send({ error: 'unprocessable', issues: semantic.issues });
       }
