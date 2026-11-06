@@ -3,6 +3,8 @@ import { metadataAnalyzer } from './metadata.js';
 import { loudnessAnalyzer } from './loudness.js';
 import { transcodeAnalyzer } from './transcode.js';
 import { peaksAnalyzer } from './peaks.js';
+import { bpmAnalyzer } from './bpm.js';
+import { keyAnalyzer } from './key.js';
 import { noopAnalyzer } from './noop.js';
 
 /**
@@ -20,6 +22,8 @@ export const ANALYZERS: readonly Analyzer[] = [
   loudnessAnalyzer, // before transcode: normalization reuses its measurement
   transcodeAnalyzer,
   peaksAnalyzer,
+  bpmAnalyzer, // bpm + key share one decoded analysis window (ctx.pcmWindow)
+  keyAnalyzer,
   noopAnalyzer,
 ];
 

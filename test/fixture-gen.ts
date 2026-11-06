@@ -3,6 +3,9 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { makeCadence, makeClickTrack } from '../bench/lib/synthesis.js';
+import { PC_NAMES } from '../bench/lib/notes.js';
+import { writeWavS16 } from '../bench/lib/wav.js';
 
 /**
  * ffmpeg-synthesized test fixtures, generated at test bootstrap (vitest
@@ -60,10 +63,37 @@ const SPECS: readonly FixtureSpec[] = [
   },
 ];
 
+/**
+ * M5 accuracy-floor fixtures: synthesized in-process (bench/lib/synthesis.ts),
+ * ground truth by construction — click tracks at exact BPMs and cadences in
+ * all 24 keys. The 87/174 pair covers the half/double ambiguity.
+ */
+export const BPM_FIXTURES: ReadonlyArray<{ file: string; bpm: number; noise: boolean }> = [
+  { file: 'click-87.wav', bpm: 87, noise: false },
+  { file: 'click-120.wav', bpm: 120, noise: false },
+  { file: 'click-128.5.wav', bpm: 128.5, noise: false },
+  { file: 'click-174.wav', bpm: 174, noise: false },
+  { file: 'click-120-noise.wav', bpm: 120, noise: true },
+];
+
+export const KEY_FIXTURES: ReadonlyArray<{ file: string; key: string; scale: 'major' | 'minor' }> = Array.from(
+  { length: 12 },
+  (_, pc) => pc,
+).flatMap((pc) =>
+  (['major', 'minor'] as const).map((scale) => ({
+    file: `cadence-${(PC_NAMES[pc] ?? 'C').replace('#', 's')}-${scale}.wav`,
+    key: PC_NAMES[pc] ?? 'C',
+    scale,
+  })),
+);
+
+const SYNTH_VERSION = 'm5-synth-v1';
 const MANIFEST = join(FIXTURE_DIR, 'manifest.json');
 
 export async function generateFixtures(): Promise<void> {
-  const manifest = createHash('sha256').update(JSON.stringify(SPECS)).digest('hex');
+  const manifest = createHash('sha256')
+    .update(JSON.stringify({ SPECS, BPM_FIXTURES, KEY_FIXTURES, SYNTH_VERSION }))
+    .digest('hex');
   const existing = await readFile(MANIFEST, 'utf8').then(
     (t) => t,
     () => null,
@@ -76,6 +106,13 @@ export async function generateFixtures(): Promise<void> {
     await execa('ffmpeg', ['-y', '-v', 'error', ...spec.args, join(FIXTURE_DIR, spec.file)], {
       timeout: 60_000,
     });
+  }
+  for (const f of BPM_FIXTURES) {
+    writeWavS16(join(FIXTURE_DIR, f.file), makeClickTrack(f.bpm, 25, 44100, f.noise), 44100);
+  }
+  for (const f of KEY_FIXTURES) {
+    const pc = PC_NAMES.indexOf(f.key as (typeof PC_NAMES)[number]);
+    writeWavS16(join(FIXTURE_DIR, f.file), makeCadence(pc, f.scale, 44100), 44100);
   }
   await writeFile(MANIFEST, manifest);
 }

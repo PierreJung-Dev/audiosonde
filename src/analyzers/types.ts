@@ -3,6 +3,7 @@ import type { JobRequest } from '../schema/job.js';
 import type { SniffedContainer } from '../pipeline/sniff.js';
 import type { ProbeData } from '../media/probe.js';
 import type { LoudnessMeasurement } from '../media/loudness.js';
+import type { PcmWindow } from '../media/pcm.js';
 import type { AddressPolicy } from '../net/ssrf.js';
 
 /**
@@ -28,6 +29,11 @@ export interface AnalyzerContext {
   probe(): Promise<ProbeData>;
   /** Shared EBU R128 measurement pass — memoized, one measurement per job. */
   measureLoudness(): Promise<LoudnessMeasurement>;
+  /**
+   * Shared decoded analysis window (mono 44.1 kHz float32, centered, ≤180 s —
+   * see src/media/pcm.ts) — memoized, one decode per job (bpm + key reuse it).
+   */
+  pcmWindow(): Promise<PcmWindow>;
   /** SSRF address policy for analyzer uploads (signed PUT). */
   readonly policy: AddressPolicy;
 }
