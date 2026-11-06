@@ -43,8 +43,11 @@ training our own, or a third-party API on the caller's side.
 ## Rule 4 — Test & benchmark audio
 
 No copyrighted audio in the repo, ever. Fixtures are ffmpeg-generated (tones, noise, clicks)
-or verifiably CC0. Benchmark reference tracks (M5) are fetched at run time from openly
-licensed sources and never committed.
+or verifiably CC0. Benchmark reference tracks (M5) are fetched at run time and never
+committed: either openly licensed, or — for research annotation datasets (GiantSteps) —
+downloaded from the dataset maintainers' own public distribution mirror (JKU), verified
+against the dataset's per-file checksums, used solely for local evaluation, and never
+redistributed or shipped in any artifact.
 
 ## Dependency table (keep current)
 
@@ -63,8 +66,8 @@ licensed sources and never committed.
 | globals | npm (dev) | MIT | — | added (M0) |
 | ffmpeg / ffprobe | binary (subprocess) | LGPL/GPL build | — | in image (M0); used M2/M3; no `--enable-nonfree` |
 | audiowaveform (BBC) | binary (subprocess) | GPL-3.0 | — | in image (M0) pinned `1.10.2`; used M4 |
-| essentia.js | npm/WASM | AGPL-3.0 | ⚠️ MTG model weights are NC — **code only, never the models** | M5 candidate |
-| aubio | binary (subprocess) | GPL-3.0 | — | M5 candidate |
+| essentia.js | npm/WASM | AGPL-3.0 | ⚠️ MTG model weights are NC — **code only, never the models** | added (M5): benchmark + analyzer candidate |
+| aubio | binary (subprocess) | GPL-3.0 | — | M5 candidate — bench-time only (brew/apt), enters the Docker image only if selected |
 
 ## Rule 5 — Contributions & relicensing
 
