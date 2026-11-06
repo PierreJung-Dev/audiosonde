@@ -1,6 +1,6 @@
 import type { Analyzer } from './types.js';
 import { JobFailure } from '../errors.js';
-import { getEssentia, withVector } from '../media/essentia.js';
+import { runKeyTask } from '../media/essentia-tasks.js';
 
 /**
  * `key` analyzer — essentia.js KeyExtractor with the `edma` profile over the
@@ -11,6 +11,9 @@ import { getEssentia, withVector } from '../media/essentia.js';
  * `confidence` is the extractor's key strength (0..1) passed through — it
  * calibrates: strength < 0.55 was ~never exact on GiantSteps, ≥ 0.7 was exact
  * 61% of the time (see the ADR).
+ *
+ * The extraction runs in a worker thread (src/media/essentia-tasks.ts, M6):
+ * same WASM, same call, same results — algoVersion stays 1.
  *
  * Tonic names are normalized to sharps (C, C#, D, … B) so callers get one
  * stable 12-name vocabulary.
@@ -39,11 +42,11 @@ export const keyAnalyzer: Analyzer = {
   algoVersion: 1,
   async run(ctx): Promise<KeyResult> {
     const { samples } = await ctx.pcmWindow();
-    const essentia = await getEssentia();
-
-    const res = withVector(essentia, samples, (vec) =>
-      essentia.KeyExtractor(vec, true, 4096, 4096, 12, 3500, 60, 25, 0.2, 'edma', 44100, 0.0001, 440, 'cosine', 'hann'),
-    );
+    const res = await runKeyTask(samples, {
+      analyzer: 'key',
+      timeoutMs: ctx.config.analyzerTimeoutMs,
+      signal: ctx.signal,
+    });
 
     const key = SHARP_NORMALIZE[res.key] ?? res.key;
     if (!/^[A-G]#?$/.test(key)) {

@@ -36,4 +36,11 @@ describe('loadConfig', () => {
   it('rejects invalid numeric env vars', () => {
     expect(() => loadConfig({ AUDIOSONDE_SECRET: 's', PORT: '-1' })).toThrow();
   });
+
+  it('parses METRICS_ENABLED strictly (default true, "false" disables, junk rejected)', () => {
+    expect(loadConfig({ AUDIOSONDE_SECRET: 's' }).metricsEnabled).toBe(true);
+    expect(loadConfig({ AUDIOSONDE_SECRET: 's', METRICS_ENABLED: 'false' }).metricsEnabled).toBe(false);
+    expect(loadConfig({ AUDIOSONDE_SECRET: 's', METRICS_ENABLED: 'true' }).metricsEnabled).toBe(true);
+    expect(() => loadConfig({ AUDIOSONDE_SECRET: 's', METRICS_ENABLED: 'yes' })).toThrow();
+  });
 });

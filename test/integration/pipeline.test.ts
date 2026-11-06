@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
 import { buildServer } from '../../src/server.js';
 import { signPayload, verifySignature } from '../../src/hmac.js';
-import { JobRunner } from '../../src/pipeline/runner.js';
+import { JobRunner, type RunnerLogger } from '../../src/pipeline/runner.js';
 import type { Config } from '../../src/config.js';
 import { fakeResolveBinaries, TEST_SECRET, testConfig } from '../helpers.js';
 import { makeTestWav } from '../fixtures.js';
@@ -226,13 +226,15 @@ describe('callback failure logging (runner unit)', () => {
   it('logs CALLBACK_FAILED after exhausting the 5 attempts', async () => {
     caller.callbackStatuses = [500];
     const errorLogs: Array<Record<string, unknown>> = [];
+    const makeLog = (bindings: Record<string, unknown>): RunnerLogger => ({
+      info: () => undefined,
+      warn: () => undefined,
+      error: (obj) => errorLogs.push({ ...bindings, ...(obj as Record<string, unknown>) }),
+      child: (more) => makeLog({ ...bindings, ...more }),
+    });
     const runner = new JobRunner({
       config: integrationConfig,
-      log: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: (obj) => errorLogs.push(obj as Record<string, unknown>),
-      },
+      log: makeLog({}),
       policy: loopbackAllowedPolicy,
       tmpRoot,
       callbackBaseDelayMs: 1,

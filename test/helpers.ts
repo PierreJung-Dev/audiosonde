@@ -21,6 +21,7 @@ export const testConfig: Config = {
   jobTimeoutMs: 1000,
   analyzerTimeoutMs: 1000,
   signatureToleranceSeconds: 300,
+  metricsEnabled: true,
   binaries: { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe', audiowaveform: 'audiowaveform' },
 };
 

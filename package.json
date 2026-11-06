@@ -12,12 +12,13 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cp src/media/essentia-worker.mjs dist/media/",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "load:sanity": "tsx scripts/load-sanity.ts",
     "bench:synthetic": "tsx bench/synthetic.ts",
     "bench:fetch": "tsx bench/fetch-giantsteps.ts",
     "bench:run": "tsx bench/run.ts"

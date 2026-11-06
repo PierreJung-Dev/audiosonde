@@ -29,6 +29,27 @@ async function main(): Promise<void> {
   );
   app.log.info({ binaries: await resolve() }, 'resolved binaries');
 
+  // Graceful shutdown: stop accepting, drain in-flight jobs (callbacks +
+  // tmp cleanup run in the server's onClose hook), then exit. Orchestrator
+  // grace periods are usually shorter than a worst-case job — anything still
+  // running when the platform sends SIGKILL is lost, as the durability model
+  // documents (callers own reconciliation).
+  let shuttingDown = false;
+  const shutdown = (signal: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    app.log.info({ signal }, 'shutting down: draining in-flight jobs');
+    app
+      .close()
+      .then(() => process.exit(0))
+      .catch((err: unknown) => {
+        app.log.error({ err: err instanceof Error ? err.message : String(err) }, 'shutdown error');
+        process.exit(1);
+      });
+  };
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+
   await app.listen({ host: config.host, port: config.port });
 }
 

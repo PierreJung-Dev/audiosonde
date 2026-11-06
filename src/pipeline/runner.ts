@@ -11,6 +11,7 @@ import { probeFile, type ProbeData } from '../media/probe.js';
 import { measureLoudness, type LoudnessMeasurement } from '../media/loudness.js';
 import { decodePcmWindow, type PcmWindow } from '../media/pcm.js';
 import { ENGINE_VERSION } from '../version.js';
+import type { Metrics } from '../metrics.js';
 import { dispatchCallback } from './callback.js';
 import { fetchSource } from './fetch.js';
 
@@ -31,11 +32,15 @@ export interface RunnerLogger {
   info(obj: object, msg?: string): void;
   warn(obj: object, msg?: string): void;
   error(obj: object, msg?: string): void;
+  /** Derive a logger with bound fields (pino-style) — jobId scoping. */
+  child(bindings: Record<string, unknown>): RunnerLogger;
 }
 
 export interface RunnerOptions {
   readonly config: Config;
   readonly log: RunnerLogger;
+  /** Counter sink for /metrics (optional; tests may omit it). */
+  readonly metrics?: Metrics;
   /** Address policy for source fetch + callback (tests inject a looser one). */
   readonly policy?: AddressPolicy;
   /** Root for per-job tmp dirs (default: os.tmpdir()). */
@@ -60,6 +65,7 @@ export interface CallbackPayload {
 export class JobRunner {
   private readonly config: Config;
   private readonly log: RunnerLogger;
+  private readonly metrics: Metrics | undefined;
   private readonly policy: AddressPolicy;
   private readonly tmpRoot: string;
   private readonly callbackBaseDelayMs: number;
@@ -68,6 +74,7 @@ export class JobRunner {
   constructor(options: RunnerOptions) {
     this.config = options.config;
     this.log = options.log;
+    this.metrics = options.metrics;
     this.policy = options.policy ?? publicAddressPolicy;
     this.tmpRoot = options.tmpRoot ?? tmpdir();
     this.callbackBaseDelayMs = options.callbackBaseDelayMs ?? 1000;
@@ -82,7 +89,11 @@ export class JobRunner {
    * The slot is held until the callback attempt finishes and tmp is cleaned.
    */
   tryStart(job: JobRequest): boolean {
-    if (this.inFlight.size >= this.config.maxConcurrentJobs) return false;
+    if (this.inFlight.size >= this.config.maxConcurrentJobs) {
+      this.metrics?.jobRejected();
+      return false;
+    }
+    this.metrics?.jobAccepted();
     const promise = this.run(job)
       .catch((err: unknown) => {
         // run() reports all job failures through the callback; reaching here
@@ -110,6 +121,9 @@ export class JobRunner {
     const started = Date.now();
     const timeoutMs = Math.min(job.limits?.timeoutMs ?? this.config.jobTimeoutMs, this.config.jobTimeoutMs);
     const signal = AbortSignal.timeout(timeoutMs);
+    // Every log line of this job carries its jobId (structured, greppable).
+    const log = this.log.child({ jobId: job.jobId });
+    log.info({ analyses: job.analyses, timeoutMs }, 'job started');
 
     const errors: JobErrorEntry[] = [];
     const result: Record<string, unknown> = {};
@@ -126,6 +140,7 @@ export class JobRunner {
         signal,
       });
       downloadMs = fetched.downloadMs;
+      log.info({ bytes: fetched.bytes, container: fetched.container, downloadMs }, 'source fetched');
 
       let probePromise: Promise<ProbeData> | undefined;
       let loudnessPromise: Promise<LoudnessMeasurement> | undefined;
@@ -172,14 +187,21 @@ export class JobRunner {
         try {
           result[analyzer.name] = await this.runAnalyzer(analyzer, ctx, started, timeoutMs);
         } catch (err) {
-          errors.push(toErrorEntry(err, 'ANALYSIS_FAILED', analyzer.name));
+          const entry = toErrorEntry(err, 'ANALYSIS_FAILED', analyzer.name);
+          errors.push(entry);
+          log.warn(
+            { analyzer: analyzer.name, code: entry.code, retryable: entry.retryable, err: entry.message },
+            'analyzer failed',
+          );
         } finally {
           perAnalyzerMs[analyzer.name] = Date.now() - t0;
         }
       }
     } catch (err) {
       // Fetch-stage failure (or timeout before/while downloading).
-      errors.push(toErrorEntry(err, 'SOURCE_FETCH_FAILED', null));
+      const entry = toErrorEntry(err, 'SOURCE_FETCH_FAILED', null);
+      errors.push(entry);
+      log.warn({ code: entry.code, retryable: entry.retryable, err: entry.message }, 'job failed before analysis');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -196,16 +218,22 @@ export class JobRunner {
       timings: { totalMs: Date.now() - started, downloadMs, perAnalyzerMs },
     };
 
-    this.log.info({ jobId: job.jobId, status, errors: errors.length }, 'job finished');
+    log.info({ status, errors: errors.length, totalMs: payload.timings.totalMs }, 'job finished');
+    this.metrics?.jobCompleted(status, payload.timings.totalMs);
+    for (const entry of errors) this.metrics?.jobError(entry.code);
 
     const outcome = await dispatchCallback(job.callback.url, payload, {
       secret: this.config.signingSecret,
       policy: this.policy,
       baseDelayMs: this.callbackBaseDelayMs,
     });
-    if (!outcome.delivered) {
+    this.metrics?.callbackOutcome(outcome.delivered);
+    if (outcome.delivered) {
+      log.info({ attempts: outcome.attempts }, 'callback delivered');
+    } else {
       // Log-only by definition: there is nowhere left to deliver this.
-      this.log.error(
+      this.metrics?.jobError('CALLBACK_FAILED');
+      log.error(
         {
           code: 'CALLBACK_FAILED',
           jobId: job.jobId,

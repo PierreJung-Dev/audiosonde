@@ -9,6 +9,7 @@ require a new version prefix (`/v2`); additive changes are allowed within v1.
 POST /v1/jobs        accept an analysis job          → 202 { accepted }
 GET  /healthz        liveness (no auth)              → 200 { status, version, binaries }
 GET  /readyz         readiness (no auth)             → 200 ready / 503 not_ready
+GET  /metrics        Prometheus counters (no auth)   → 200 text (optional, on by default)
 POST <callback.url>  audiosonde → caller, signed     (result delivery)
 ```
 
@@ -161,6 +162,12 @@ Two unauthenticated endpoints, for orchestrators:
 - `GET /readyz` — **readiness**. `200 { "status": "ready", … }` when every *required* binary is
   present; `503 { "status": "not_ready", "missing": [...] }` otherwise, so a broken container is
   kept out of rotation. Which binaries are required grows as analyzers are enabled.
+- `GET /metrics` — **Prometheus counters** (text exposition format), added in M6. Aggregate
+  operational counters only (jobs in flight / accepted / rejected / completed by status,
+  errors by taxonomy code, callback outcomes, job duration sum/count) — never job content
+  or URLs. Unauthenticated like the health endpoints; disable with `METRICS_ENABLED=false`
+  if the port is exposed publicly. The exact series are an operational surface, not part of
+  the versioned v1 contract.
 
 ## Failure & durability model
 
