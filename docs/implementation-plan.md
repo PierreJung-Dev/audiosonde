@@ -35,8 +35,8 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M2 — `metadata` analyzer (ffprobe)
 
-- [ ] Duration, sample rate, channels, bit depth, bitrate, container/codec, embedded tags.
-- [ ] Fixture set generated with ffmpeg at test-bootstrap (sine/noise in wav/flac/mp3/ogg at
+- [x] Duration, sample rate, channels, bit depth, bitrate, container/codec, embedded tags.
+- [x] Fixture set generated with ffmpeg at test-bootstrap (sine/noise in wav/flac/mp3/ogg at
       various rates/depths) — **no committed audio binaries**.
 - **AC**: golden tests across the fixture matrix; corrupt/truncated file →
   `UNSUPPORTED_FORMAT`, not a crash.
