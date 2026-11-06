@@ -12,6 +12,7 @@ export const testConfig: Config = {
   maxSourceBytes: 1024,
   maxDurationMs: 1000,
   jobTimeoutMs: 1000,
+  analyzerTimeoutMs: 1000,
   signatureToleranceSeconds: 300,
   binaries: { ffmpeg: 'ffmpeg', ffprobe: 'ffprobe', audiowaveform: 'audiowaveform' },
 };

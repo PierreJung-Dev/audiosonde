@@ -11,8 +11,8 @@ binding — a milestone isn't done until they pass. Update this file (check the 
       invalid, replayed, malformed).
 - [x] `POST /v1/jobs`: zod validation of the full v1 request shape → `202`/`400`/`401`/`422`.
 - [x] Dockerfile (Debian slim, pinned ffmpeg + audiowaveform `1.10.2`); builds via CI.
-- [ ] CI (GitHub Actions on Blacksmith): lint (eslint), typecheck, vitest, docker build —
-      *written; pending first green run on the PR.*
+- [x] CI (GitHub Actions, GitHub-hosted runners): lint (eslint), typecheck, vitest, docker
+      build — green on main since PR #1.
 - Add-ons (decided during M0 kickoff):
   - [x] `GET /readyz` readiness endpoint (503 when a required binary is missing; none required
         in M0).
@@ -24,12 +24,12 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M1 — Pipeline skeleton, end to end
 
-- [ ] Job runner with bounded concurrency + `429` backpressure; per-job tmp dir with
+- [x] Job runner with bounded concurrency + `429` backpressure; per-job tmp dir with
       guaranteed cleanup.
-- [ ] Fetcher: signed-GET download (streamed), SSRF guard (private ranges, redirect limit),
+- [x] Fetcher: signed-GET download (streamed), SSRF guard (private ranges, redirect limit),
       size cap, optional `contentHash` verification, magic-bytes sniff.
-- [ ] Callback dispatcher: signed POST, 5 retries with backoff, `CALLBACK_FAILED` logging.
-- [ ] Wire a `noop` analyzer through the full path; error taxonomy implemented.
+- [x] Callback dispatcher: signed POST, 5 retries with backoff, `CALLBACK_FAILED` logging.
+- [x] Wire a `noop` analyzer through the full path; error taxonomy implemented.
 - **AC**: an integration test with a local mock caller (serves a fixture, receives the
   callback) passes: happy path, SSRF-blocked URL, hash mismatch, oversized source.
 

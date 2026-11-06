@@ -4,11 +4,14 @@ import { buildServer } from '../src/server.js';
 import { signPayload } from '../src/hmac.js';
 import { fakeResolveBinaries, TEST_SECRET, testConfig } from './helpers.js';
 
+// `.invalid` is reserved (RFC 2606): accepted jobs may fire a background
+// fetch, and these hostnames are guaranteed never to resolve — no test ever
+// touches the real network.
 const validJob = {
   jobId: 'job-1',
-  source: { url: 'https://example.com/mix.wav' },
-  analyses: ['metadata', 'loudness'],
-  callback: { url: 'https://api.example.com/callback' },
+  source: { url: 'https://source.invalid/mix.wav' },
+  analyses: ['noop'],
+  callback: { url: 'https://callback.invalid/cb' },
 };
 
 function post(
@@ -34,6 +37,7 @@ describe('POST /v1/jobs', () => {
       config: testConfig,
       loggerEnabled: false,
       resolveBinaries: fakeResolveBinaries,
+      callbackBaseDelayMs: 1, // accepted jobs fail fast on close
     });
     await app.ready();
   });
@@ -48,16 +52,28 @@ describe('POST /v1/jobs', () => {
     expect(res.json()).toMatchObject({ accepted: true, jobId: 'job-1' });
   });
 
-  it('202 on a valid signed job with output slots', async () => {
+  it('422 when requesting a contract analysis not available in this build', async () => {
+    // transcode/peaks are contract-valid but land in M3/M4 — the engine never
+    // accepts work it cannot perform.
     const res = await post(app, {
       ...validJob,
       analyses: ['transcode', 'peaks'],
       outputs: {
-        transcode: { putUrl: 'https://s3/put', format: 'opus', bitrateKbps: 128, targetLufs: -14 },
-        peaks: { putUrl: 'https://s3/peaks', format: 'audiowaveform-dat', zoomLevels: [256, 1024] },
+        transcode: { putUrl: 'https://s3.invalid/put', format: 'opus', bitrateKbps: 128, targetLufs: -14 },
+        peaks: { putUrl: 'https://s3.invalid/peaks', format: 'audiowaveform-dat', zoomLevels: [256, 1024] },
       },
     });
-    expect(res.statusCode).toBe(202);
+    expect(res.statusCode).toBe(422);
+    const issues = (res.json() as { issues: string[] }).issues;
+    expect(issues.some((i) => i.includes('not available in this build'))).toBe(true);
+  });
+
+  it('400 on a malformed contentHash', async () => {
+    const res = await post(app, {
+      ...validJob,
+      source: { url: 'https://source.invalid/mix.wav', contentHash: 'md5:abcdef' },
+    });
+    expect(res.statusCode).toBe(400);
   });
 
   it('401 when the signature is missing', async () => {
