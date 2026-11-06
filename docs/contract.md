@@ -172,7 +172,20 @@ Callers own durability:
 - A callback may arrive up to 5 times (retries), or never (crash in flight). Make your callback
   handler **idempotent on `jobId`**.
 
+## Artifact uploads (signed PUT)
+
+Artifacts are streamed to the caller's signed PUT URLs with `Content-Length` and a fixed
+`Content-Type` per artifact — sign your URLs accordingly (or leave the content type
+unsigned): `transcode` mp3 → `audio/mpeg`, opus → `audio/ogg`; `peaks`
+`audiowaveform-dat` → `application/octet-stream`, json → `application/json`.
+A rejected/expired PUT yields `ARTIFACT_UPLOAD_FAILED` for that analyzer (job becomes
+`"partial"` if others succeeded).
+
 ## Limits (engine defaults, overridable by env)
 
 Max source size 500 MB · max duration 4 h · overall timeout 10 min · per-analyzer timeouts ·
 max concurrent jobs per instance (backpressure via `429` on `/v1/jobs`).
+
+A source whose probed duration exceeds the maximum is rejected before any decoding stage
+(`loudness`, `transcode`, `peaks`, `bpm`, `key`) with `UNSUPPORTED_FORMAT`
+(`"source duration … exceeds …"`, not retryable); `metadata` alone still works on it.

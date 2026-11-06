@@ -2,6 +2,8 @@ import type { Config } from '../config.js';
 import type { JobRequest } from '../schema/job.js';
 import type { SniffedContainer } from '../pipeline/sniff.js';
 import type { ProbeData } from '../media/probe.js';
+import type { LoudnessMeasurement } from '../media/loudness.js';
+import type { AddressPolicy } from '../net/ssrf.js';
 
 /**
  * Analyzer module shape (see docs/architecture.md): filesystem in, JSON out.
@@ -24,6 +26,10 @@ export interface AnalyzerContext {
   readonly signal: AbortSignal;
   /** Shared ffprobe pass over the source — memoized, one probe per job. */
   probe(): Promise<ProbeData>;
+  /** Shared EBU R128 measurement pass — memoized, one measurement per job. */
+  measureLoudness(): Promise<LoudnessMeasurement>;
+  /** SSRF address policy for analyzer uploads (signed PUT). */
+  readonly policy: AddressPolicy;
 }
 
 export interface Analyzer {

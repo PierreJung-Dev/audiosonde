@@ -2,6 +2,7 @@ import { request as httpRequest, type IncomingMessage, type ClientRequest } from
 import { request as httpsRequest } from 'node:https';
 import { lookup as dnsLookup, type LookupAddress } from 'node:dns';
 import { isIP, type LookupFunction } from 'node:net';
+import type { Readable } from 'node:stream';
 import { SsrfBlockedError, type AddressPolicy } from './ssrf.js';
 
 /**
@@ -67,7 +68,11 @@ export interface SafeRequestOptions {
   readonly method: 'GET' | 'POST' | 'PUT';
   readonly policy: AddressPolicy;
   readonly headers?: Record<string, string>;
-  readonly body?: Buffer | string;
+  /**
+   * Request body. A factory returning a fresh Readable makes large bodies
+   * streamable AND re-sendable across 307/308 redirect hops.
+   */
+  readonly body?: Buffer | string | (() => Readable);
   /** Aborts the request (connection + body streaming). */
   readonly signal: AbortSignal;
 }
@@ -121,8 +126,14 @@ function issueRequest(url: URL, options: SafeRequestOptions): Promise<IncomingMe
       else if (err.cause instanceof SsrfBlockedError) reject(err.cause);
       else reject(err);
     });
-    if (options.body !== undefined) req.write(options.body);
-    req.end();
+    if (typeof options.body === 'function') {
+      const body = options.body();
+      body.on('error', (err) => req.destroy(err));
+      body.pipe(req);
+    } else {
+      if (options.body !== undefined) req.write(options.body);
+      req.end();
+    }
   });
 }
 

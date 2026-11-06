@@ -43,9 +43,9 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M3 — `transcode` + `loudness` (ffmpeg)
 
-- [ ] `loudness`: integrated LUFS, true peak (dBTP), loudness range (EBU R128 via `loudnorm`
+- [x] `loudness`: integrated LUFS, true peak (dBTP), loudness range (EBU R128 via `loudnorm`
       measurement pass).
-- [ ] `transcode`: MP3/Opus derivative, optional two-pass `loudnorm` to `targetLufs`;
+- [x] `transcode`: MP3/Opus derivative, optional two-pass `loudnorm` to `targetLufs`;
       artifact upload via signed PUT (mock server in tests).
 - **AC**: normalized fixture lands within ±0.5 LU of target (re-measured); derivative decodes
   (ffprobe round-trip); expired PUT URL → `ARTIFACT_UPLOAD_FAILED`, `status: "partial"`.
