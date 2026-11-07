@@ -66,8 +66,12 @@ redistributed or shipped in any artifact.
 | globals | npm (dev) | MIT | — | added (M0) |
 | ffmpeg / ffprobe | binary (subprocess) | LGPL/GPL build | — | in image (M0); used M2/M3; no `--enable-nonfree` |
 | audiowaveform (BBC) | binary (subprocess) | GPL-3.0 | — | in image (M0) pinned `1.10.2`; used M4 |
-| essentia.js | npm/WASM | AGPL-3.0 | ⚠️ MTG model weights are NC — **code only, never the models** | added (M5): benchmark + analyzer candidate |
-| aubio | binary (subprocess) | GPL-3.0 | — | M5 candidate — bench-time only (brew/apt), enters the Docker image only if selected |
+| essentia.js | npm/WASM | AGPL-3.0 | ⚠️ MTG model weights are NC — **code only, never the models** | added (M5): selected for bpm/key; runs in a worker thread since M6 |
+| aubio | binary (subprocess) | GPL-3.0 | — | M5 candidate — bench-time only (brew/apt); eliminated, NOT in the Docker image |
+
+Re-audited for M6 (2026-11-06): the table above matches `package.json` and the Docker image
+exactly; M6 added **no** dependencies (metrics are hand-rolled, the worker uses Node's
+built-in `worker_threads`).
 
 ## Rule 5 — Contributions & relicensing
 

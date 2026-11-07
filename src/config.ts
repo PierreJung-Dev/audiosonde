@@ -20,6 +20,8 @@ export interface Config {
   readonly jobTimeoutMs: number;
   readonly analyzerTimeoutMs: number;
   readonly signatureToleranceSeconds: number;
+  /** Expose the Prometheus `GET /metrics` endpoint (default true). */
+  readonly metricsEnabled: boolean;
   readonly binaries: {
     readonly ffmpeg: string;
     readonly ffprobe: string;
@@ -40,6 +42,8 @@ const envSchema = z.object({
   JOB_TIMEOUT_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
   ANALYZER_TIMEOUT_MS: z.coerce.number().int().positive().default(5 * 60 * 1000),
   SIGNATURE_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
+  // z.coerce.boolean() would treat the string "false" as true — enum instead.
+  METRICS_ENABLED: z.enum(['true', 'false']).default('true'),
   FFMPEG_PATH: z.string().min(1).default('ffmpeg'),
   FFPROBE_PATH: z.string().min(1).default('ffprobe'),
   AUDIOWAVEFORM_PATH: z.string().min(1).default('audiowaveform'),
@@ -75,6 +79,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     jobTimeoutMs: e.JOB_TIMEOUT_MS,
     analyzerTimeoutMs: e.ANALYZER_TIMEOUT_MS,
     signatureToleranceSeconds: e.SIGNATURE_TOLERANCE_SECONDS,
+    metricsEnabled: e.METRICS_ENABLED === 'true',
     binaries: {
       ffmpeg: e.FFMPEG_PATH,
       ffprobe: e.FFPROBE_PATH,

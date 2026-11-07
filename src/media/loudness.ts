@@ -76,8 +76,12 @@ async function runMeasurement(
     { reject: false, timeout: options.timeoutMs, cancelSignal: options.signal },
   );
 
-  if (result.timedOut) {
-    throw new JobFailure('TIMEOUT', 'loudness measurement timed out', { retryable: true });
+  if (result.timedOut || result.isCanceled) {
+    throw new JobFailure(
+      'TIMEOUT',
+      result.timedOut ? 'loudness measurement timed out' : 'loudness measurement aborted at the job deadline',
+      { retryable: true },
+    );
   }
   if (result.failed || result.exitCode !== 0) {
     const tail = (result.stderr ?? '').trim().split('\n').slice(-2).join(' ');

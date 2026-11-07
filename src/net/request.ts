@@ -4,6 +4,7 @@ import { lookup as dnsLookup, type LookupAddress } from 'node:dns';
 import { isIP, type LookupFunction } from 'node:net';
 import type { Readable } from 'node:stream';
 import { SsrfBlockedError, type AddressPolicy } from './ssrf.js';
+import { ENGINE_VERSION } from '../version.js';
 
 /**
  * SSRF-guarded HTTP(S) requests, used for BOTH the source fetch (GET) and the
@@ -20,6 +21,15 @@ import { SsrfBlockedError, type AddressPolicy } from './ssrf.js';
  */
 
 export const MAX_REDIRECTS = 3;
+
+/**
+ * Sent on every outbound request (source GET, artifact PUT, callback POST).
+ * Node's http client sends NO User-Agent by default, and several CDNs and
+ * anti-bot layers answer 403 to UA-less requests (Wikimedia, for one — found
+ * while verifying the README quickstart). A descriptive UA is also honest:
+ * operators of fetched hosts can see what is calling them.
+ */
+export const USER_AGENT = `audiosonde/${ENGINE_VERSION}`;
 
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 
@@ -113,7 +123,7 @@ function issueRequest(url: URL, options: SafeRequestOptions): Promise<IncomingMe
       url,
       {
         method: options.method,
-        headers: options.headers ?? {},
+        headers: { 'user-agent': USER_AGENT, ...options.headers },
         lookup: makeGuardedLookup(options.policy),
         signal: options.signal,
       },

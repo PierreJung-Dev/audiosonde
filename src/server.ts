@@ -5,7 +5,9 @@ import { resolveBinaries } from './binaries.js';
 import { registerHealthz } from './routes/healthz.js';
 import { registerReadyz } from './routes/readyz.js';
 import { registerJobs } from './routes/jobs.js';
+import { registerMetrics } from './routes/metrics.js';
 import { JobRunner } from './pipeline/runner.js';
+import { Metrics } from './metrics.js';
 import type { AddressPolicy } from './net/ssrf.js';
 
 declare module 'fastify' {
@@ -73,9 +75,11 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   let cached: Promise<BinaryReport> | undefined;
   const getBinaries = (): Promise<BinaryReport> => (cached ??= resolve());
 
+  const metrics = new Metrics();
   const runner = new JobRunner({
     config,
     log: app.log,
+    metrics,
     ...(deps.addressPolicy !== undefined ? { policy: deps.addressPolicy } : {}),
     ...(deps.tmpRoot !== undefined ? { tmpRoot: deps.tmpRoot } : {}),
     ...(deps.callbackBaseDelayMs !== undefined
@@ -90,6 +94,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
   registerHealthz(app, { getBinaries });
   registerReadyz(app, { getBinaries });
+  if (config.metricsEnabled) registerMetrics(app, { metrics, runner });
   registerJobs(app, {
     config,
     runner,

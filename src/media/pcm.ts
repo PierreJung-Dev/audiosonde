@@ -54,8 +54,12 @@ export async function decodePcmWindow(sourcePath: string, options: DecodeWindowO
     encoding: 'buffer' as const,
     maxBuffer: 48 * 1024 * 1024, // window ceiling is ~31.8 MB of f32le
   });
-  if (result.timedOut) {
-    throw new JobFailure('TIMEOUT', `pcm decode exceeded ${options.timeoutMs}ms`, { retryable: true });
+  if (result.timedOut || result.isCanceled) {
+    throw new JobFailure(
+      'TIMEOUT',
+      result.timedOut ? `pcm decode exceeded ${options.timeoutMs}ms` : 'pcm decode aborted at the job deadline',
+      { retryable: true },
+    );
   }
   if (result.exitCode !== 0) {
     const stderr = Buffer.isBuffer(result.stderr) ? result.stderr.toString('utf8') : String(result.stderr ?? '');

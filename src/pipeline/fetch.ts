@@ -89,6 +89,10 @@ export async function fetchSource(
     });
   } catch (err) {
     if (err instanceof JobFailure) throw err;
+    if (options.signal.aborted) {
+      // The job deadline hit while connecting / waiting for headers.
+      throw new JobFailure('TIMEOUT', 'source download timed out', { retryable: true });
+    }
     const retryable = !(err instanceof SsrfBlockedError) && !(err instanceof RedirectError);
     const message = err instanceof Error ? err.message : String(err);
     throw new JobFailure('SOURCE_FETCH_FAILED', `source download failed: ${message}`, { retryable });

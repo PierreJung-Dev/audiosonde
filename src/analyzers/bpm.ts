@@ -1,12 +1,16 @@
 import type { Analyzer } from './types.js';
 import { JobFailure } from '../errors.js';
-import { getEssentia, withVector } from '../media/essentia.js';
+import { runBpmTask } from '../media/essentia-tasks.js';
 
 /**
  * `bpm` analyzer — essentia.js PercivalBpmEstimator over the shared analysis
  * window. Measured winner of the M5 benchmark (docs/decisions/0005): 95.9%
  * acc2 (±2%, octave-tolerant) on GiantSteps tempo (n=661), vs 80.9% for
  * RhythmExtractor2013 and 18.3% for aubio.
+ *
+ * The estimation runs in a worker thread (src/media/essentia-tasks.ts, M6):
+ * same WASM, same calls, same results — only the thread changed, so
+ * algoVersion stays 1.
  *
  * The RAW estimate is reported — deliberately no octave folding into a
  * "preferred" BPM range: folding is a genre prior (it lifted acc1 to 87% on
@@ -33,21 +37,21 @@ export const bpmAnalyzer: Analyzer = {
   algoVersion: 1,
   async run(ctx): Promise<BpmResult> {
     const { samples } = await ctx.pcmWindow();
-    const essentia = await getEssentia();
+    const { full, half1, half2 } = await runBpmTask(samples, {
+      analyzer: 'bpm',
+      timeoutMs: ctx.config.analyzerTimeoutMs,
+      signal: ctx.signal,
+    });
 
-    const estimate = withVector(essentia, samples, (vec) => essentia.PercivalBpmEstimator(vec).bpm);
-    if (!Number.isFinite(estimate) || estimate <= 0) {
+    if (!Number.isFinite(full) || full <= 0) {
       throw new JobFailure('ANALYSIS_FAILED', 'tempo estimator returned no result', { analyzer: 'bpm' });
     }
 
-    const mid = Math.floor(samples.length / 2);
-    const halves = [samples.subarray(0, mid), samples.subarray(mid)];
-    const agreeing = halves.filter((half) => {
-      const bpm = withVector(essentia, half, (vec) => essentia.PercivalBpmEstimator(vec).bpm);
-      return Number.isFinite(bpm) && bpm > 0 && octaveAgrees(bpm, estimate);
-    }).length;
+    const agreeing = [half1, half2].filter(
+      (bpm) => Number.isFinite(bpm) && bpm > 0 && octaveAgrees(bpm, full),
+    ).length;
     const confidence = agreeing === 2 ? 0.9 : agreeing === 1 ? 0.6 : 0.3;
 
-    return { value: Math.round(estimate * 10) / 10, confidence };
+    return { value: Math.round(full * 10) / 10, confidence };
   },
 };

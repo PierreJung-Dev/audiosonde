@@ -88,8 +88,12 @@ export const transcodeAnalyzer: Analyzer = {
       timeout: ctx.config.analyzerTimeoutMs,
       cancelSignal: ctx.signal,
     });
-    if (result.timedOut) {
-      throw new JobFailure('TIMEOUT', 'transcode timed out', { analyzer: 'transcode', retryable: true });
+    if (result.timedOut || result.isCanceled) {
+      throw new JobFailure(
+        'TIMEOUT',
+        result.timedOut ? 'transcode timed out' : 'transcode aborted at the job deadline',
+        { analyzer: 'transcode', retryable: true },
+      );
     }
     if (result.failed || result.exitCode !== 0) {
       const tail = (result.stderr ?? '').trim().split('\n').slice(-2).join(' ');

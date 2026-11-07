@@ -76,12 +76,24 @@ binding — a milestone isn't done until they pass. Update this file (check the 
 
 ## M6 — Hardening & publication readiness
 
-- [ ] Per-stage timeouts audited; structured logs (jobId-scoped); optional `/metrics`.
-- [ ] Load sanity: N concurrent jobs on a small container without OOM (document sizing).
-- [ ] Licensing table re-audited ([licensing-policy.md](licensing-policy.md)); `SECURITY.md`;
-      README quickstart against a real deployment (Railway/Fly recipe).
-- [ ] Publication checklist: repo history clean of secrets, contribution policy (DCO/CLA)
-      decided, then flip to public.
+- [x] Per-stage timeouts audited — budget table in [architecture.md](architecture.md);
+      essentia.js moved to a worker thread so bpm/key timeouts are actually enforceable
+      ([decisions/0006](decisions/0006-m6-hardening.md); algoVersions unchanged, CI floors
+      pass). Structured logs jobId-scoped (pino child logger); Prometheus `/metrics`
+      (`METRICS_ENABLED`, default on). Graceful SIGTERM/SIGINT drain.
+- [x] Load sanity: `pnpm load:sanity` — waves of concurrent full-pipeline jobs (3-min
+      source), all `done`, no OOM; measured sizing documented in architecture.md and the
+      README (2 GB ↔ 4 concurrent jobs).
+- [x] Licensing table re-audited 2026-11-06 (M6 added no dependencies); `SECURITY.md`
+      (GitHub private advisories); README quickstart + Fly/Railway recipes — recipes
+      written against current platform docs, **flagged in the README as not yet verified
+      against live platform accounts**; the docker-run quickstart is verified locally.
+- [x] Publication checklist: repo history scanned clean of secrets (gitleaks + pattern
+      scan over all refs, 2026-11-06 — only `.env.example` placeholders ever committed);
+      contribution policy **deferred by owner decision (2026-11-07)** — the repo goes
+      public with code contributions closed ([CONTRIBUTING.md](../CONTRIBUTING.md)), and
+      DCO-vs-CLA must be settled before the first external PR is merged. Ready to flip
+      public (owner action).
 - **AC**: a stranger can deploy from the README alone and analyze a file with `curl`.
 
 ## Explicitly out of scope (v1)

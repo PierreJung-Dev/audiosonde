@@ -56,8 +56,12 @@ export const peaksAnalyzer: Analyzer = {
       ['-y', '-v', 'error', '-i', ctx.sourcePath, '-vn', '-c:a', 'pcm_s16le', '-f', 'wav', wavPath],
       { reject: false, timeout: ctx.config.analyzerTimeoutMs, cancelSignal: ctx.signal },
     );
-    if (decode.timedOut) {
-      throw new JobFailure('TIMEOUT', 'peaks decode timed out', { analyzer: 'peaks', retryable: true });
+    if (decode.timedOut || decode.isCanceled) {
+      throw new JobFailure(
+        'TIMEOUT',
+        decode.timedOut ? 'peaks decode timed out' : 'peaks decode aborted at the job deadline',
+        { analyzer: 'peaks', retryable: true },
+      );
     }
     if (decode.failed || decode.exitCode !== 0) {
       throw new JobFailure('ANALYSIS_FAILED', `ffmpeg decode for peaks failed: ${tail(decode.stderr)}`, {
@@ -84,11 +88,14 @@ export const peaksAnalyzer: Analyzer = {
         ],
         { reject: false, timeout: ctx.config.analyzerTimeoutMs, cancelSignal: ctx.signal },
       );
-      if (result.timedOut) {
-        throw new JobFailure('TIMEOUT', `peaks generation timed out at zoom ${level.zoom}`, {
-          analyzer: 'peaks',
-          retryable: true,
-        });
+      if (result.timedOut || result.isCanceled) {
+        throw new JobFailure(
+          'TIMEOUT',
+          result.timedOut
+            ? `peaks generation timed out at zoom ${level.zoom}`
+            : `peaks generation aborted at the job deadline (zoom ${level.zoom})`,
+          { analyzer: 'peaks', retryable: true },
+        );
       }
       if (result.failed || result.exitCode !== 0) {
         throw new JobFailure(

@@ -61,8 +61,12 @@ export async function probeFile(path: string, options: ProbeOptions): Promise<Pr
     },
   );
 
-  if (result.timedOut) {
-    throw new JobFailure('TIMEOUT', 'ffprobe timed out', { retryable: true });
+  if (result.timedOut || result.isCanceled) {
+    throw new JobFailure(
+      'TIMEOUT',
+      result.timedOut ? 'ffprobe timed out' : 'ffprobe aborted at the job deadline',
+      { retryable: true },
+    );
   }
   if (result.failed || result.exitCode !== 0) {
     throw new JobFailure(
