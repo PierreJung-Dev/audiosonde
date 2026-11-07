@@ -88,9 +88,12 @@ binding — a milestone isn't done until they pass. Update this file (check the 
       (GitHub private advisories); README quickstart + Fly/Railway recipes — recipes
       written against current platform docs, **flagged in the README as not yet verified
       against live platform accounts**; the docker-run quickstart is verified locally.
-- [ ] Publication checklist: repo history scanned clean of secrets (gitleaks + pattern
-      scan over all refs, 2026-11-06 — only `.env.example` placeholders ever committed) ✅;
-      contribution policy (DCO/CLA) — **owner decision pending**; then flip to public.
+- [x] Publication checklist: repo history scanned clean of secrets (gitleaks + pattern
+      scan over all refs, 2026-11-06 — only `.env.example` placeholders ever committed);
+      contribution policy **deferred by owner decision (2026-11-07)** — the repo goes
+      public with code contributions closed ([CONTRIBUTING.md](../CONTRIBUTING.md)), and
+      DCO-vs-CLA must be settled before the first external PR is merged. Ready to flip
+      public (owner action).
 - **AC**: a stranger can deploy from the README alone and analyze a file with `curl`.
 
 ## Explicitly out of scope (v1)

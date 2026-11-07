@@ -200,5 +200,6 @@ covers the *engine's* code, not yours, as long as you interact with it over its 
 modify the engine and let users interact with it over a network, you must publish your
 modified source under the AGPL.
 
-Contributions are not open yet (the project is in its private bootstrap phase); a
-contribution policy (DCO/CLA) will be settled before opening up.
+Issues and bug reports are welcome. **Code contributions are not open yet** — the
+contribution policy (DCO vs CLA) will be settled before the first external PR is merged;
+see [CONTRIBUTING.md](CONTRIBUTING.md).
